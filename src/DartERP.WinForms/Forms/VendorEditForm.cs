@@ -33,6 +33,7 @@ public class VendorEditForm : Form
         BackColor = Theme.CardBackground;
 
         _vendorTypeBox.DataSource = Enum.GetValues<VendorType>();
+        _vendorTypeBox.EnableEnumDisplayFormat();
 
         var layout = new TableLayoutPanel
         {
@@ -56,9 +57,15 @@ public class VendorEditForm : Form
         Controls.Add(BuildButtonBar());
 
         if (existing is not null)
-            LoadExisting(existing);
+        {
+            // ComboBox.SelectedItem/SelectedValue only takes effect once the control's
+            // native handle exists, so this must wait for Load rather than run here.
+            Load += (_, _) => LoadExisting(existing);
+        }
         else
+        {
             _vendorTypeBox.SelectedItem = VendorType.RawMaterials;
+        }
     }
 
     private void LoadExisting(Vendor v)

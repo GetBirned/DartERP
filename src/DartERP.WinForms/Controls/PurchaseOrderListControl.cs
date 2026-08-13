@@ -95,7 +95,7 @@ public class PurchaseOrderListControl : UserControl
                     e.FormattingApplied = true;
                     break;
                 case "Status" when e.CellStyle is not null:
-                    e.Value = po.Status.ToString();
+                    e.Value = EnumDisplay.For(po.Status);
                     e.CellStyle.ForeColor = StatusColors.For(po.Status);
                     e.CellStyle.Font = Theme.FontBodyBold;
                     e.FormattingApplied = true;

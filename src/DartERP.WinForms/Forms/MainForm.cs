@@ -144,7 +144,9 @@ public class MainForm : Form
             _serviceProvider.GetRequiredService<PurchaseOrderService>(),
             _serviceProvider.GetRequiredService<VendorService>(),
             _serviceProvider.GetRequiredService<ProductService>()),
-        ["Work Orders"] = () => Placeholder("Work Orders"),
+        ["Work Orders"] = () => new WorkOrderListControl(
+            _serviceProvider.GetRequiredService<WorkOrderService>(),
+            _serviceProvider.GetRequiredService<ProductService>()),
         ["Quality Control"] = () => Placeholder("Quality Control"),
     };
 

@@ -37,6 +37,7 @@ public class ProductEditForm : Form
         BackColor = Theme.CardBackground;
 
         _categoryBox.DataSource = Enum.GetValues<ProductCategory>();
+        _categoryBox.EnableEnumDisplayFormat();
 
         var layout = new TableLayoutPanel
         {
@@ -64,9 +65,15 @@ public class ProductEditForm : Form
         Controls.Add(BuildButtonBar());
 
         if (existing is not null)
-            LoadExisting(existing);
+        {
+            // ComboBox.SelectedItem/SelectedValue only takes effect once the control's
+            // native handle exists, so this must wait for Load rather than run here.
+            Load += (_, _) => LoadExisting(existing);
+        }
         else
+        {
             _categoryBox.SelectedItem = ProductCategory.FinishedProduct;
+        }
     }
 
     private void LoadExisting(Product p)

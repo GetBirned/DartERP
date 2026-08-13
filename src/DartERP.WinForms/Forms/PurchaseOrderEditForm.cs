@@ -46,6 +46,7 @@ public class PurchaseOrderEditForm : Form
         BackColor = Theme.CardBackground;
 
         _statusBox.DataSource = Enum.GetValues<PurchaseOrderStatus>();
+        _statusBox.EnableEnumDisplayFormat();
         _vendorBox.DisplayMember = "CompanyName";
         _vendorBox.ValueMember = "VendorId";
         _vendorBox.DataSource = _activeVendors;
@@ -80,9 +81,16 @@ public class PurchaseOrderEditForm : Form
         Controls.Add(footer);
 
         if (existing is not null)
-            LoadExisting(existing);
+        {
+            // ComboBox.SelectedValue (DataSource+ValueMember binding) only takes effect
+            // once the control's native handle exists, so this must wait for Load rather
+            // than run here in the constructor.
+            Load += (_, _) => LoadExisting(existing);
+        }
         else
+        {
             _statusBox.SelectedItem = PurchaseOrderStatus.Draft;
+        }
 
         RecalculateTotal();
     }

@@ -93,4 +93,19 @@ public static class ControlStyleExtensions
         comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
         return comboBox;
     }
+
+    /// <summary>
+    /// Renders a ComboBox bound to an enum's values as spaced display text
+    /// ("InProduction" -> "In Production") instead of the raw member name.
+    /// </summary>
+    public static ComboBox EnableEnumDisplayFormat(this ComboBox comboBox)
+    {
+        comboBox.FormattingEnabled = true;
+        comboBox.Format += (_, e) =>
+        {
+            if (e.ListItem is Enum enumValue)
+                e.Value = EnumDisplay.For(enumValue);
+        };
+        return comboBox;
+    }
 }

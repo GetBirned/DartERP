@@ -74,7 +74,7 @@ public class InventoryControl : UserControl
             switch (columnName)
             {
                 case "Category":
-                    e.Value = product.Category.ToString();
+                    e.Value = EnumDisplay.For(product.Category);
                     e.FormattingApplied = true;
                     break;
                 case "Value":

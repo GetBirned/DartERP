@@ -83,7 +83,7 @@ public class VendorListControl : UserControl
 
             if (columnName == "VendorType")
             {
-                e.Value = vendor.VendorType.ToString();
+                e.Value = EnumDisplay.For(vendor.VendorType);
                 e.FormattingApplied = true;
             }
             else if (columnName == "Status" && e.CellStyle is not null)

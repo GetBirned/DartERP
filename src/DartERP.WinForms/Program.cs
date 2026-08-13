@@ -53,6 +53,7 @@ static class Program
         services.AddSingleton<ProductService>();
         services.AddSingleton<InventoryService>();
         services.AddSingleton<PurchaseOrderService>();
+        services.AddSingleton<WorkOrderService>();
 
         services.AddSingleton<MainForm>();
     }
