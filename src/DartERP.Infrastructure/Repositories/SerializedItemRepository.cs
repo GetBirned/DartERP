@@ -7,40 +7,65 @@ namespace DartERP.Infrastructure.Repositories;
 
 public class SerializedItemRepository : ISerializedItemRepository
 {
-    private readonly DartErpDbContext _context;
+    private readonly IDbContextFactory<DartErpDbContext> _contextFactory;
 
-    public SerializedItemRepository(DartErpDbContext context)
+    public SerializedItemRepository(IDbContextFactory<DartErpDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
-    public async Task<SerializedItem?> GetByIdAsync(int id) =>
-        await _context.SerializedItems
+    public async Task<SerializedItem?> GetByIdAsync(int id)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.SerializedItems
             .Include(s => s.Product)
             .Include(s => s.WorkOrder)
             .FirstOrDefaultAsync(s => s.SerializedItemId == id);
+    }
 
-    public async Task<List<SerializedItem>> GetAllAsync() =>
-        await _context.SerializedItems.OrderByDescending(s => s.CreatedDate).ToListAsync();
+    public async Task<List<SerializedItem>> GetAllAsync()
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.SerializedItems.OrderByDescending(s => s.CreatedDate).ToListAsync();
+    }
 
-    public async Task AddAsync(SerializedItem entity) => await _context.SerializedItems.AddAsync(entity);
+    public async Task AddAsync(SerializedItem entity)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        context.SerializedItems.Add(entity);
+        await context.SaveChangesAsync();
+    }
 
-    public void Update(SerializedItem entity) => _context.SerializedItems.Update(entity);
+    public async Task UpdateAsync(SerializedItem entity)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        context.SerializedItems.Update(entity);
+        await context.SaveChangesAsync();
+    }
 
-    public async Task<List<SerializedItem>> GetAllWithDetailsAsync() =>
-        await _context.SerializedItems
+    public async Task<List<SerializedItem>> GetAllWithDetailsAsync()
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.SerializedItems
             .Include(s => s.Product)
             .Include(s => s.WorkOrder)
             .OrderByDescending(s => s.CreatedDate)
             .ToListAsync();
+    }
 
-    public async Task<List<SerializedItem>> GetByWorkOrderAsync(int workOrderId) =>
-        await _context.SerializedItems
+    public async Task<List<SerializedItem>> GetByWorkOrderAsync(int workOrderId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.SerializedItems
             .Include(s => s.Product)
             .Where(s => s.WorkOrderId == workOrderId)
             .OrderBy(s => s.SerialNumber)
             .ToListAsync();
+    }
 
-    public async Task<bool> SerialNumberExistsAsync(string serialNumber) =>
-        await _context.SerializedItems.AnyAsync(s => s.SerialNumber == serialNumber);
+    public async Task<bool> SerialNumberExistsAsync(string serialNumber)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.SerializedItems.AnyAsync(s => s.SerialNumber == serialNumber);
+    }
 }

@@ -7,26 +7,43 @@ namespace DartERP.Infrastructure.Repositories;
 
 public class CustomerRepository : ICustomerRepository
 {
-    private readonly DartErpDbContext _context;
+    private readonly IDbContextFactory<DartErpDbContext> _contextFactory;
 
-    public CustomerRepository(DartErpDbContext context)
+    public CustomerRepository(IDbContextFactory<DartErpDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
-    public async Task<Customer?> GetByIdAsync(int id) =>
-        await _context.Customers.FindAsync(id);
+    public async Task<Customer?> GetByIdAsync(int id)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Customers.FindAsync(id);
+    }
 
-    public async Task<List<Customer>> GetAllAsync() =>
-        await _context.Customers.OrderBy(c => c.CompanyName).ToListAsync();
+    public async Task<List<Customer>> GetAllAsync()
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Customers.OrderBy(c => c.CompanyName).ToListAsync();
+    }
 
-    public async Task AddAsync(Customer entity) => await _context.Customers.AddAsync(entity);
+    public async Task AddAsync(Customer entity)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        context.Customers.Add(entity);
+        await context.SaveChangesAsync();
+    }
 
-    public void Update(Customer entity) => _context.Customers.Update(entity);
+    public async Task UpdateAsync(Customer entity)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        context.Customers.Update(entity);
+        await context.SaveChangesAsync();
+    }
 
     public async Task<List<Customer>> SearchAsync(string? searchTerm, bool activeOnly)
     {
-        var query = _context.Customers.AsQueryable();
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var query = context.Customers.AsQueryable();
 
         if (activeOnly)
             query = query.Where(c => c.IsActive);
@@ -43,10 +60,16 @@ public class CustomerRepository : ICustomerRepository
         return await query.OrderBy(c => c.CompanyName).ToListAsync();
     }
 
-    public async Task<bool> CustomerNumberExistsAsync(string customerNumber, int? excludeId = null) =>
-        await _context.Customers.AnyAsync(c =>
+    public async Task<bool> CustomerNumberExistsAsync(string customerNumber, int? excludeId = null)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Customers.AnyAsync(c =>
             c.CustomerNumber == customerNumber && (excludeId == null || c.CustomerId != excludeId));
+    }
 
-    public async Task<int> GetActiveCountAsync() =>
-        await _context.Customers.CountAsync(c => c.IsActive);
+    public async Task<int> GetActiveCountAsync()
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Customers.CountAsync(c => c.IsActive);
+    }
 }

@@ -10,4 +10,10 @@ public interface IPurchaseOrderRepository : IRepository<PurchaseOrder>
     Task<bool> PurchaseOrderNumberExistsAsync(string purchaseOrderNumber);
     Task<string> GetNextPurchaseOrderNumberAsync();
     Task<int> GetOpenCountAsync();
+
+    /// <summary>
+    /// Replaces the header fields and full line set for an existing purchase order.
+    /// Lines are fully replaced (delete-then-insert) since nothing else references them.
+    /// </summary>
+    Task UpdateWithLinesAsync(PurchaseOrder header, List<PurchaseOrderLine> lines);
 }
