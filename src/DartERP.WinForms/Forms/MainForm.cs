@@ -140,7 +140,10 @@ public class MainForm : Form
         ["Vendors"] = () => new VendorListControl(_serviceProvider.GetRequiredService<VendorService>()),
         ["Products"] = () => new ProductListControl(_serviceProvider.GetRequiredService<ProductService>()),
         ["Inventory"] = () => new InventoryControl(_serviceProvider.GetRequiredService<InventoryService>()),
-        ["Purchase Orders"] = () => Placeholder("Purchase Orders"),
+        ["Purchase Orders"] = () => new PurchaseOrderListControl(
+            _serviceProvider.GetRequiredService<PurchaseOrderService>(),
+            _serviceProvider.GetRequiredService<VendorService>(),
+            _serviceProvider.GetRequiredService<ProductService>()),
         ["Work Orders"] = () => Placeholder("Work Orders"),
         ["Quality Control"] = () => Placeholder("Quality Control"),
     };
