@@ -150,7 +150,9 @@ public class MainForm : Form
         ["Serialized Inventory"] = () => new SerializedItemListControl(
             _serviceProvider.GetRequiredService<SerializedItemService>(),
             _serviceProvider.GetRequiredService<WorkOrderService>()),
-        ["Quality Control"] = () => Placeholder("Quality Control"),
+        ["Quality Control"] = () => new QualityControlListControl(
+            _serviceProvider.GetRequiredService<QualityInspectionService>(),
+            _serviceProvider.GetRequiredService<SerializedItemService>()),
     };
 
     private static Control Placeholder(string moduleName) =>
