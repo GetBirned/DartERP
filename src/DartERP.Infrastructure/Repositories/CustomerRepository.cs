@@ -72,4 +72,17 @@ public class CustomerRepository : ICustomerRepository
         await using var context = await _contextFactory.CreateDbContextAsync();
         return await context.Customers.CountAsync(c => c.IsActive);
     }
+
+    public async Task<string> GetNextCustomerNumberAsync()
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var numbers = await context.Customers.Select(c => c.CustomerNumber).ToListAsync();
+
+        var nextSeq = numbers
+            .Select(n => int.TryParse(n.Replace("CUST-", ""), out var seq) ? seq : 0)
+            .DefaultIfEmpty(1000)
+            .Max() + 1;
+
+        return $"CUST-{nextSeq}";
+    }
 }

@@ -1,5 +1,7 @@
+using DartERP.Application.Services;
 using DartERP.WinForms.Controls;
 using DartERP.WinForms.Styling;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DartERP.WinForms.Forms;
 
@@ -134,7 +136,7 @@ public class MainForm : Form
     private Dictionary<string, Func<Control>> BuildModuleFactories() => new()
     {
         ["Dashboard"] = () => Placeholder("Dashboard"),
-        ["Customers"] = () => Placeholder("Customers"),
+        ["Customers"] = () => new CustomerListControl(_serviceProvider.GetRequiredService<CustomerService>()),
         ["Vendors"] = () => Placeholder("Vendors"),
         ["Products"] = () => Placeholder("Products"),
         ["Inventory"] = () => Placeholder("Inventory"),

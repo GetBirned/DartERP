@@ -66,6 +66,8 @@ public static class ControlStyleExtensions
         grid.EnableHeadersVisualStyles = false;
         grid.ColumnHeadersDefaultCellStyle.BackColor = Theme.AppBackground;
         grid.ColumnHeadersDefaultCellStyle.ForeColor = Theme.TextSecondary;
+        grid.ColumnHeadersDefaultCellStyle.SelectionBackColor = Theme.AppBackground;
+        grid.ColumnHeadersDefaultCellStyle.SelectionForeColor = Theme.TextSecondary;
         grid.ColumnHeadersDefaultCellStyle.Font = Theme.FontBodyBold;
         grid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
         grid.ColumnHeadersHeight = 38;

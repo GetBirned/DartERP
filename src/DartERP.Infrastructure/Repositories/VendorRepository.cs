@@ -78,4 +78,17 @@ public class VendorRepository : IVendorRepository
         await using var context = await _contextFactory.CreateDbContextAsync();
         return await context.Vendors.CountAsync(v => v.IsActive);
     }
+
+    public async Task<string> GetNextVendorNumberAsync()
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var numbers = await context.Vendors.Select(v => v.VendorNumber).ToListAsync();
+
+        var nextSeq = numbers
+            .Select(n => int.TryParse(n.Replace("VEND-", ""), out var seq) ? seq : 0)
+            .DefaultIfEmpty(2000)
+            .Max() + 1;
+
+        return $"VEND-{nextSeq}";
+    }
 }

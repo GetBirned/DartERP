@@ -1,3 +1,4 @@
+using DartERP.Application.Services;
 using DartERP.Core.Interfaces;
 using DartERP.Infrastructure.Data;
 using DartERP.Infrastructure.Repositories;
@@ -39,15 +40,17 @@ static class Program
 
         services.AddDbContextFactory<DartErpDbContext>(options => options.UseSqlServer(connectionString));
 
-        services.AddScoped<ICustomerRepository, CustomerRepository>();
-        services.AddScoped<IVendorRepository, VendorRepository>();
-        services.AddScoped<IProductRepository, ProductRepository>();
-        services.AddScoped<IPurchaseOrderRepository, PurchaseOrderRepository>();
-        services.AddScoped<IWorkOrderRepository, WorkOrderRepository>();
-        services.AddScoped<ISerializedItemRepository, SerializedItemRepository>();
-        services.AddScoped<IQualityInspectionRepository, QualityInspectionRepository>();
+        services.AddSingleton<ICustomerRepository, CustomerRepository>();
+        services.AddSingleton<IVendorRepository, VendorRepository>();
+        services.AddSingleton<IProductRepository, ProductRepository>();
+        services.AddSingleton<IPurchaseOrderRepository, PurchaseOrderRepository>();
+        services.AddSingleton<IWorkOrderRepository, WorkOrderRepository>();
+        services.AddSingleton<ISerializedItemRepository, SerializedItemRepository>();
+        services.AddSingleton<IQualityInspectionRepository, QualityInspectionRepository>();
 
-        services.AddTransient<MainForm>();
+        services.AddSingleton<CustomerService>();
+
+        services.AddSingleton<MainForm>();
     }
 
     /// <summary>
