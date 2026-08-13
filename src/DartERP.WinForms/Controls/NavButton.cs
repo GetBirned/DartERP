@@ -45,7 +45,7 @@ public class NavButton : Panel
 
         if (_isSelected)
         {
-            using var accentBrush = new SolidBrush(Color.White);
+            using var accentBrush = new SolidBrush(Theme.SidebarTextSelected);
             e.Graphics.FillRectangle(accentBrush, 0, 0, 4, Height);
         }
 

@@ -60,8 +60,8 @@ public class DashboardControl : UserControl
         var summary = await _service.GetSummaryAsync();
 
         _kpiPanel.Controls.Clear();
-        _kpiPanel.Controls.Add(new KpiCard("Active Customers", summary.ActiveCustomers.ToString()) { AccentColor = Theme.AccentBlue });
-        _kpiPanel.Controls.Add(new KpiCard("Active Vendors", summary.ActiveVendors.ToString()) { AccentColor = Theme.AccentBlue });
+        _kpiPanel.Controls.Add(new KpiCard("Active Customers", summary.ActiveCustomers.ToString()) { AccentColor = Theme.AccentPrimary });
+        _kpiPanel.Controls.Add(new KpiCard("Active Vendors", summary.ActiveVendors.ToString()) { AccentColor = Theme.AccentPrimary });
         _kpiPanel.Controls.Add(new KpiCard("Open Purchase Orders", summary.OpenPurchaseOrders.ToString()) { AccentColor = Theme.WarningAmber });
         _kpiPanel.Controls.Add(new KpiCard("Open Work Orders", summary.OpenWorkOrders.ToString()) { AccentColor = Theme.WarningAmber });
         _kpiPanel.Controls.Add(new KpiCard("Inventory Value", summary.InventoryValue.ToString("C0")) { AccentColor = Theme.SuccessGreen });

@@ -2,6 +2,7 @@ using DartERP.Application.Services;
 using DartERP.Application.Validation;
 using DartERP.Core.Enums;
 using DartERP.Core.Models;
+using DartERP.WinForms.Controls;
 using DartERP.WinForms.Styling;
 
 namespace DartERP.WinForms.Forms;
@@ -14,11 +15,12 @@ public class ProductEditForm : Form
     private readonly TextBox _skuBox = new TextBox().StyleAsInput();
     private readonly TextBox _nameBox = new TextBox().StyleAsInput();
     private readonly ComboBox _categoryBox = new ComboBox().StyleAsInput();
+    private readonly ProductIcon _categoryIcon = new(ProductCategory.FinishedProduct);
     private readonly TextBox _descriptionBox = new TextBox().StyleAsInput();
-    private readonly NumericUpDown _unitCostBox = new() { DecimalPlaces = 2, Maximum = 999999, Font = Theme.FontBody };
-    private readonly NumericUpDown _salePriceBox = new() { DecimalPlaces = 2, Maximum = 999999, Font = Theme.FontBody };
-    private readonly NumericUpDown _quantityOnHandBox = new() { Maximum = 999999, Font = Theme.FontBody };
-    private readonly NumericUpDown _reorderLevelBox = new() { Maximum = 999999, Font = Theme.FontBody };
+    private readonly NumericUpDown _unitCostBox = new NumericUpDown { DecimalPlaces = 2, Maximum = 999999 }.StyleAsInput();
+    private readonly NumericUpDown _salePriceBox = new NumericUpDown { DecimalPlaces = 2, Maximum = 999999 }.StyleAsInput();
+    private readonly NumericUpDown _quantityOnHandBox = new NumericUpDown { Maximum = 999999 }.StyleAsInput();
+    private readonly NumericUpDown _reorderLevelBox = new NumericUpDown { Maximum = 999999 }.StyleAsInput();
     private readonly CheckBox _isSerializedBox = new() { Text = "Serialized product", Font = Theme.FontBody, AutoSize = true };
     private readonly Label _errorLabel;
 
@@ -38,6 +40,20 @@ public class ProductEditForm : Form
 
         _categoryBox.DataSource = Enum.GetValues<ProductCategory>();
         _categoryBox.EnableEnumDisplayFormat();
+        _categoryBox.SelectedIndexChanged += (_, _) =>
+        {
+            if (_categoryBox.SelectedItem is ProductCategory category)
+                _categoryIcon.Category = category;
+        };
+
+        // Plain Panel + Dock ignores Margin, so the gap before the icon
+        // comes from Width padding baked into the icon control itself.
+        var categoryRow = new Panel { Height = 28 };
+        _categoryIcon.Width = 30;
+        _categoryIcon.Dock = DockStyle.Right;
+        _categoryBox.Dock = DockStyle.Fill;
+        categoryRow.Controls.Add(_categoryBox);
+        categoryRow.Controls.Add(_categoryIcon);
 
         var layout = new TableLayoutPanel
         {
@@ -52,7 +68,7 @@ public class ProductEditForm : Form
 
         FormLayoutHelper.AddRow(layout, 0, "SKU*", _skuBox);
         FormLayoutHelper.AddRow(layout, 1, "Product Name*", _nameBox);
-        FormLayoutHelper.AddRow(layout, 2, "Category", _categoryBox);
+        FormLayoutHelper.AddRow(layout, 2, "Category", categoryRow);
         FormLayoutHelper.AddRow(layout, 3, "Description", _descriptionBox);
         FormLayoutHelper.AddRow(layout, 4, "Unit Cost*", _unitCostBox);
         FormLayoutHelper.AddRow(layout, 5, "Sale Price*", _salePriceBox);

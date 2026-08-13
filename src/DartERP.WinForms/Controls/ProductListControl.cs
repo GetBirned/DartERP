@@ -100,6 +100,31 @@ public class ProductListControl : UserControl
                     break;
             }
         };
+
+        // Paint the product's category icon inline before its name — the
+        // "small identifier per piece" ask. DataGridView has no built-in
+        // way to mix a drawn glyph with cell text short of a custom cell
+        // type, so this hand-paints the whole cell (background, icon, text)
+        // instead of building a full DataGridViewCell subclass for one column.
+        _grid.CellPainting += (_, e) =>
+        {
+            if (e.RowIndex < 0 || _grid.Columns[e.ColumnIndex].Name != "ProductName" || e.CellStyle is null)
+                return;
+
+            var product = (Product)_grid.Rows[e.RowIndex].DataBoundItem;
+            e.PaintBackground(e.ClipBounds, true);
+
+            const int iconSize = 16;
+            var iconBounds = new Rectangle(e.CellBounds.Left + 6, e.CellBounds.Top + (e.CellBounds.Height - iconSize) / 2, iconSize, iconSize);
+            ProductIconRenderer.Draw(e.Graphics!, product.Category, iconBounds, Theme.TextSecondary);
+
+            var textLeft = iconBounds.Right + 8;
+            var textBounds = new Rectangle(textLeft, e.CellBounds.Top, e.CellBounds.Right - textLeft - 4, e.CellBounds.Height);
+            TextRenderer.DrawText(e.Graphics!, product.ProductName, e.CellStyle.Font, textBounds, e.CellStyle.ForeColor,
+                TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
+
+            e.Handled = true;
+        };
     }
 
     private async Task RefreshAsync()

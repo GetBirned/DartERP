@@ -9,7 +9,7 @@ public class KpiCard : Panel
 {
     private readonly Label _titleLabel;
     private readonly Label _valueLabel;
-    private Color _accentColor = Theme.AccentBlue;
+    private Color _accentColor = Theme.AccentPrimary;
 
     public KpiCard(string title, string value)
     {
@@ -17,6 +17,7 @@ public class KpiCard : Panel
         BackColor = Theme.CardBackground;
         Padding = new Padding(16, 14, 16, 14);
         Margin = new Padding(0, 0, 16, 16);
+        this.ApplyRoundedRegion(10);
 
         _titleLabel = new Label
         {
@@ -57,9 +58,16 @@ public class KpiCard : Panel
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
-        using var borderPen = new Pen(Theme.BorderColor);
-        e.Graphics.DrawRectangle(borderPen, 0, 0, Width - 1, Height - 1);
+        e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+        // The left accent bar is a plain FillRectangle, but since it's clipped
+        // to this control's rounded Region, its top/bottom edges come out
+        // rounded to match automatically — no extra path math needed there.
         using var accentBrush = new SolidBrush(_accentColor);
         e.Graphics.FillRectangle(accentBrush, 0, 0, 4, Height);
+
+        using var borderPen = new Pen(Theme.BorderColor);
+        using var borderPath = RoundedCorners.CreatePath(ClientRectangle, 10);
+        e.Graphics.DrawPath(borderPen, borderPath);
     }
 }

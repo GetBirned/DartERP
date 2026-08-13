@@ -14,7 +14,7 @@ public class WorkOrderEditForm : Form
     private readonly bool _isLocked;
 
     private readonly ComboBox _productBox = new ComboBox().StyleAsInput();
-    private readonly NumericUpDown _quantityBox = new() { Minimum = 1, Maximum = 999999, Value = 1, Font = Theme.FontBody };
+    private readonly NumericUpDown _quantityBox = new NumericUpDown { Minimum = 1, Maximum = 999999, Value = 1 }.StyleAsInput();
     private readonly DateTimePicker _startDatePicker = new() { Font = Theme.FontBody, Format = DateTimePickerFormat.Short };
     private readonly DateTimePicker _dueDatePicker = new() { Font = Theme.FontBody, Format = DateTimePickerFormat.Short };
     private readonly ComboBox _statusBox = new ComboBox().StyleAsInput();

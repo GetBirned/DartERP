@@ -94,7 +94,7 @@ public class InventoryControl : UserControl
             }
 
             if (lowStock && e.CellStyle is not null)
-                e.CellStyle.BackColor = Color.FromArgb(255, 251, 235);
+                e.CellStyle.BackColor = Theme.WarningTint;
         };
     }
 
@@ -103,9 +103,9 @@ public class InventoryControl : UserControl
         var summary = await _service.GetSummaryAsync();
 
         _kpiPanel.Controls.Clear();
-        _kpiPanel.Controls.Add(new KpiCard("Inventory Value", summary.TotalInventoryValue.ToString("C0")) { AccentColor = Theme.AccentBlue });
+        _kpiPanel.Controls.Add(new KpiCard("Inventory Value", summary.TotalInventoryValue.ToString("C0")) { AccentColor = Theme.AccentPrimary });
         _kpiPanel.Controls.Add(new KpiCard("Active Products", summary.ActiveProductCount.ToString()) { AccentColor = Theme.SuccessGreen });
-        _kpiPanel.Controls.Add(new KpiCard("Serialized Products", summary.SerializedProductCount.ToString()) { AccentColor = Theme.AccentBlue });
+        _kpiPanel.Controls.Add(new KpiCard("Serialized Products", summary.SerializedProductCount.ToString()) { AccentColor = Theme.AccentPrimary });
         _kpiPanel.Controls.Add(new KpiCard("Below Reorder Level", summary.BelowReorderCount.ToString())
         {
             AccentColor = summary.BelowReorderCount > 0 ? Theme.WarningAmber : Theme.SuccessGreen,

@@ -4,6 +4,8 @@ using DartERP.Infrastructure.Data;
 using DartERP.Infrastructure.Repositories;
 using DartERP.Infrastructure.Seed;
 using DartERP.WinForms.Forms;
+using DartERP.WinForms.Local;
+using DartERP.WinForms.Styling;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +18,7 @@ static class Program
     static void Main()
     {
         ApplicationConfiguration.Initialize();
+        Theme.CurrentMode = AppPreferences.Load().Theme;
 
         var configuration = new ConfigurationBuilder()
             .SetBasePath(AppContext.BaseDirectory)

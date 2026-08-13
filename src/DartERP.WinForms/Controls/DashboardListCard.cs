@@ -19,6 +19,7 @@ public class DashboardListCard : Panel
         Dock = DockStyle.Fill;
         BackColor = Theme.CardBackground;
         Margin = new Padding(0, 0, 16, 16);
+        this.ApplyRoundedRegion(10);
 
         var titleLabel = new Label
         {
@@ -39,8 +40,10 @@ public class DashboardListCard : Panel
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
+        e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         using var pen = new Pen(Theme.BorderColor);
-        e.Graphics.DrawRectangle(pen, 0, 0, Width - 1, Height - 1);
+        using var path = RoundedCorners.CreatePath(ClientRectangle, 10);
+        e.Graphics.DrawPath(pen, path);
     }
 
     public void SetRows(IReadOnlyList<DashboardListRow> rows)

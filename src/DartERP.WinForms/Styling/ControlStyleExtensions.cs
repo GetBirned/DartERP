@@ -8,15 +8,20 @@ public static class ControlStyleExtensions
 {
     public static Button StyleAsPrimaryButton(this Button button)
     {
+        // Primary CTAs use the near-black brand chrome color rather than the
+        // tan accent — tan reads as a light pastel, so white button text on
+        // top of it would be nearly illegible. Reusing SidebarBackground
+        // keeps this in sync with the sidebar's black across both themes
+        // instead of hardcoding a third near-black value.
         button.FlatStyle = FlatStyle.Flat;
         button.FlatAppearance.BorderSize = 0;
-        button.BackColor = Theme.AccentBlue;
+        button.BackColor = Theme.SidebarBackground;
         button.ForeColor = Color.White;
         button.Font = Theme.FontBodyBold;
         button.Cursor = Cursors.Hand;
         button.Height = 34;
-        button.FlatAppearance.MouseOverBackColor = Color.FromArgb(0x1D, 0x4E, 0xD8);
-        return button;
+        button.FlatAppearance.MouseOverBackColor = Theme.SidebarHover;
+        return button.ApplyRoundedRegion(6);
     }
 
     public static Button StyleAsSecondaryButton(this Button button)
@@ -24,13 +29,13 @@ public static class ControlStyleExtensions
         button.FlatStyle = FlatStyle.Flat;
         button.FlatAppearance.BorderSize = 1;
         button.FlatAppearance.BorderColor = Theme.BorderColor;
-        button.BackColor = Color.White;
+        button.BackColor = Theme.CardBackground;
         button.ForeColor = Theme.TextPrimary;
         button.Font = Theme.FontBody;
         button.Cursor = Cursors.Hand;
         button.Height = 34;
         button.FlatAppearance.MouseOverBackColor = Theme.AppBackground;
-        return button;
+        return button.ApplyRoundedRegion(6);
     }
 
     public static Button StyleAsDangerButton(this Button button)
@@ -43,13 +48,13 @@ public static class ControlStyleExtensions
         button.Cursor = Cursors.Hand;
         button.Height = 34;
         button.FlatAppearance.MouseOverBackColor = Color.FromArgb(0xB9, 0x1C, 0x1C);
-        return button;
+        return button.ApplyRoundedRegion(6);
     }
 
     public static void StyleAsDataGrid(this DataGridView grid)
     {
         grid.BorderStyle = BorderStyle.None;
-        grid.BackgroundColor = Color.White;
+        grid.BackgroundColor = Theme.CardBackground;
         grid.GridColor = Theme.BorderColor;
         grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
         grid.RowHeadersVisible = false;
@@ -73,16 +78,20 @@ public static class ControlStyleExtensions
         grid.ColumnHeadersHeight = 38;
         grid.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
 
-        grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(0xDB, 0xEA, 0xFE);
+        grid.DefaultCellStyle.SelectionBackColor = Theme.SelectionHighlight;
         grid.DefaultCellStyle.SelectionForeColor = Theme.TextPrimary;
+        grid.DefaultCellStyle.BackColor = Theme.CardBackground;
+        grid.DefaultCellStyle.ForeColor = Theme.TextPrimary;
         grid.DefaultCellStyle.Padding = new Padding(6, 0, 6, 0);
-        grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(0xFA, 0xFA, 0xFB);
+        grid.AlternatingRowsDefaultCellStyle.BackColor = Theme.AlternateRowBackground;
     }
 
     public static TextBox StyleAsInput(this TextBox textBox)
     {
         textBox.Font = Theme.FontBody;
         textBox.BorderStyle = BorderStyle.FixedSingle;
+        textBox.BackColor = Theme.CardBackground;
+        textBox.ForeColor = Theme.TextPrimary;
         return textBox;
     }
 
@@ -91,7 +100,24 @@ public static class ControlStyleExtensions
         comboBox.Font = Theme.FontBody;
         comboBox.FlatStyle = FlatStyle.Flat;
         comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+        comboBox.BackColor = Theme.CardBackground;
+        comboBox.ForeColor = Theme.TextPrimary;
         return comboBox;
+    }
+
+    /// <summary>
+    /// NumericUpDown's spin-button glyphs are native-rendered regardless of
+    /// color settings, but the text portion themes correctly — unlike
+    /// DateTimePicker, which is skipped here because its native rendering
+    /// mostly ignores BackColor/ForeColor entirely (a known WinForms
+    /// limitation, not worth fighting for one date field per form).
+    /// </summary>
+    public static NumericUpDown StyleAsInput(this NumericUpDown numericUpDown)
+    {
+        numericUpDown.Font = Theme.FontBody;
+        numericUpDown.BackColor = Theme.CardBackground;
+        numericUpDown.ForeColor = Theme.TextPrimary;
+        return numericUpDown;
     }
 
     /// <summary>
