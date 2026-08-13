@@ -73,7 +73,8 @@ public class DashboardListCard : Panel
                 ForeColor = Theme.TextPrimary,
                 Dock = DockStyle.Left,
                 AutoSize = false,
-                Width = 190,
+                Width = 210,
+                AutoEllipsis = true,
                 TextAlign = ContentAlignment.MiddleLeft,
             };
 
