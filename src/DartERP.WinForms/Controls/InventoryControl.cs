@@ -17,7 +17,6 @@ public class InventoryControl : UserControl
         _service = service;
         Dock = DockStyle.Fill;
         BackColor = Theme.AppBackground;
-        AutoScroll = true;
 
         _kpiPanel = new FlowLayoutPanel
         {
@@ -59,7 +58,7 @@ public class InventoryControl : UserControl
         _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Category", HeaderText = "Category", FillWeight = 110 });
         _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "QuantityOnHand", HeaderText = "Qty On Hand", DataPropertyName = "QuantityOnHand", FillWeight = 90, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight } });
         _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "ReorderLevel", HeaderText = "Reorder Level", DataPropertyName = "ReorderLevel", FillWeight = 100, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight } });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Value", HeaderText = "Inventory Value", FillWeight = 110, DefaultCellStyle = { Format = "C2", Alignment = DataGridViewContentAlignment.MiddleRight } });
+        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Value", HeaderText = "Inventory Value", FillWeight = 110, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight } });
         _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Serialized", HeaderText = "Serialized", FillWeight = 80 });
         _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "StockStatus", HeaderText = "Stock Status", FillWeight = 100 });
 
@@ -79,7 +78,7 @@ public class InventoryControl : UserControl
                     e.FormattingApplied = true;
                     break;
                 case "Value":
-                    e.Value = product.UnitCost * product.QuantityOnHand;
+                    e.Value = (product.UnitCost * product.QuantityOnHand).ToString("C2");
                     e.FormattingApplied = true;
                     break;
                 case "Serialized":
