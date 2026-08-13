@@ -54,6 +54,7 @@ static class Program
         services.AddSingleton<InventoryService>();
         services.AddSingleton<PurchaseOrderService>();
         services.AddSingleton<WorkOrderService>();
+        services.AddSingleton<SerializedItemService>();
 
         services.AddSingleton<MainForm>();
     }

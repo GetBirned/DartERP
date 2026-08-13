@@ -147,6 +147,9 @@ public class MainForm : Form
         ["Work Orders"] = () => new WorkOrderListControl(
             _serviceProvider.GetRequiredService<WorkOrderService>(),
             _serviceProvider.GetRequiredService<ProductService>()),
+        ["Serialized Inventory"] = () => new SerializedItemListControl(
+            _serviceProvider.GetRequiredService<SerializedItemService>(),
+            _serviceProvider.GetRequiredService<WorkOrderService>()),
         ["Quality Control"] = () => Placeholder("Quality Control"),
     };
 
