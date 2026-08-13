@@ -135,7 +135,7 @@ public class MainForm : Form
 
     private Dictionary<string, Func<Control>> BuildModuleFactories() => new()
     {
-        ["Dashboard"] = () => Placeholder("Dashboard"),
+        ["Dashboard"] = () => new DashboardControl(_serviceProvider.GetRequiredService<DashboardService>()),
         ["Customers"] = () => new CustomerListControl(_serviceProvider.GetRequiredService<CustomerService>()),
         ["Vendors"] = () => new VendorListControl(_serviceProvider.GetRequiredService<VendorService>()),
         ["Products"] = () => new ProductListControl(_serviceProvider.GetRequiredService<ProductService>()),
@@ -154,9 +154,6 @@ public class MainForm : Form
             _serviceProvider.GetRequiredService<QualityInspectionService>(),
             _serviceProvider.GetRequiredService<SerializedItemService>()),
     };
-
-    private static Control Placeholder(string moduleName) =>
-        new EmptyStateControl(moduleName, "This module is under construction.");
 
     public void NavigateTo(string moduleName)
     {
