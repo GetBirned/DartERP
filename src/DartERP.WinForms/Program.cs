@@ -49,6 +49,7 @@ static class Program
         services.AddSingleton<IQualityInspectionRepository, QualityInspectionRepository>();
 
         services.AddSingleton<CustomerService>();
+        services.AddSingleton<VendorService>();
 
         services.AddSingleton<MainForm>();
     }

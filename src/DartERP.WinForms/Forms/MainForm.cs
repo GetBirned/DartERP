@@ -137,7 +137,7 @@ public class MainForm : Form
     {
         ["Dashboard"] = () => Placeholder("Dashboard"),
         ["Customers"] = () => new CustomerListControl(_serviceProvider.GetRequiredService<CustomerService>()),
-        ["Vendors"] = () => Placeholder("Vendors"),
+        ["Vendors"] = () => new VendorListControl(_serviceProvider.GetRequiredService<VendorService>()),
         ["Products"] = () => Placeholder("Products"),
         ["Inventory"] = () => Placeholder("Inventory"),
         ["Purchase Orders"] = () => Placeholder("Purchase Orders"),
