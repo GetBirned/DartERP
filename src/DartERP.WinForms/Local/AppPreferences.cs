@@ -10,7 +10,7 @@ namespace DartERP.WinForms.Local;
 /// </summary>
 public class AppPreferences
 {
-    public ThemeMode Theme { get; set; } = ThemeMode.Light;
+    public ThemeMode Theme { get; set; } = ThemeMode.Dark;
 
     private static string FilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),

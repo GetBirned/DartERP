@@ -25,6 +25,8 @@ public class LoginForm : Form
     private readonly Button _signUpTab;
     private readonly Panel _signInPanel;
     private readonly Panel _signUpPanel;
+    private readonly FlowLayoutPanel _stack;
+    private Panel _formPanel = null!;
 
     private readonly TextBox _signInUsername = new TextBox().StyleAsInput();
     private readonly TextBox _signInPassword = new TextBox().StyleAsInput();
@@ -72,64 +74,80 @@ public class LoginForm : Form
         _signInTab.Click += (_, _) => ShowSignIn();
         _signUpTab.Click += (_, _) => ShowSignUp();
 
-        var stack = new FlowLayoutPanel
+        _stack = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
             AutoSize = true,
-            Dock = DockStyle.Top,
         };
+        var stack = _stack;
         stack.Controls.Add(BuildLogo());
-        stack.Controls.Add(BuildHeadline());
         stack.Controls.Add(BuildSubtext());
-        stack.Controls.Add(Spacer(16));
+        stack.Controls.Add(Spacer(8));
         stack.Controls.Add(toggleHost);
-        stack.Controls.Add(Spacer(20));
+        stack.Controls.Add(Spacer(12));
         stack.Controls.Add(_signInPanel);
         stack.Controls.Add(_signUpPanel);
 
-        var formPanel = new Panel
+        _formPanel = new Panel
         {
             Dock = DockStyle.Fill,
             BackColor = Theme.CardBackground,
-            Padding = new Padding(60, 44, 60, 28),
-            // Sign In fits comfortably in the fixed 640px-tall window, but
-            // Sign Up's extra fields (email, role, phone, confirm password)
-            // push the total content past that — without this, "Confirm
-            // Password" and the submit button just get clipped off the
-            // bottom with no way to reach them. AutoScroll only kicks in
-            // when content actually overflows, so Sign In stays exactly as
-            // it looked before.
-            AutoScroll = true,
+            Padding = new Padding(60, 28, 60, 20),
+            // The field rows below were tightened specifically so Sign Up
+            // (7 fields, the tallest panel) fits inside the fixed 640px
+            // window. No AutoScroll here on purpose — it fought the manual
+            // vertical-centering math in CenterStack() (the scroll canvas
+            // wouldn't shrink back down after expanding once), and since
+            // Sign Up already fits without it, a plain Panel is simpler and
+            // has no scrollbar to fight.
         };
-        formPanel.Controls.Add(stack);
+        _formPanel.Controls.Add(stack);
 
-        Controls.Add(formPanel);
+        Controls.Add(_formPanel);
         Controls.Add(videoPanel);
 
         ShowSignIn();
+        _formPanel.Resize += (_, _) => CenterStack();
+        // Belt-and-suspenders: there's no window handle yet at construction
+        // time, so a nested AutoSize FlowLayoutPanel's height isn't
+        // guaranteed to have settled by the time ShowSignIn() above runs
+        // CenterStack() the first time. Shown fires once the form and every
+        // child have gone through a real layout pass, so re-centering there
+        // is what actually sticks on first paint.
+        Shown += (_, _) => CenterStack();
         Load += async (_, _) => await InitializeVideoAsync();
+    }
+
+    // The stack isn't docked — Sign In and Sign Up are very different
+    // heights (2 fields vs. 7), and centering it dead in the middle of the
+    // window looks right for both, whereas docking it to the top left a lot
+    // of dead space under the short Sign In form. Re-run any time the
+    // visible panel (and therefore the stack's total height) changes.
+    // Reads PreferredSize rather than Height directly — Height only
+    // reflects the last completed layout pass, which is stale/zero at
+    // construction time, where PreferredSize recomputes on demand instead.
+    private void CenterStack()
+    {
+        var x = _formPanel.Padding.Left;
+        var y = Math.Max(_formPanel.Padding.Top, (_formPanel.ClientSize.Height - _stack.PreferredSize.Height) / 2);
+        _stack.Location = new Point(x, y);
     }
 
     private static Panel Spacer(int height) => new() { Height = height, Width = ContentWidth };
 
     private static PictureBox BuildLogo() => new()
     {
+        // Width matches ContentWidth rather than the logo's own natural
+        // size — Zoom mode preserves the image's aspect ratio and centers
+        // it within whatever box it's given, so widening the box to the
+        // full column width is what actually centers the logo instead of
+        // it sitting flush against the left edge.
         Image = AppAssets.Logo,
         SizeMode = PictureBoxSizeMode.Zoom,
-        Width = 150,
-        Height = 42,
-        Margin = new Padding(0, 0, 0, 20),
-    };
-
-    private static Label BuildHeadline() => new()
-    {
-        Text = "Welcome to DERP",
-        Font = Theme.FontHeader,
-        ForeColor = Theme.TextPrimary,
-        AutoSize = false,
         Width = ContentWidth,
-        Height = 32,
+        Height = 42,
+        Margin = new Padding(0, 0, 0, 12),
     };
 
     private static Label BuildSubtext() => new()
@@ -137,6 +155,7 @@ public class LoginForm : Form
         Text = "Sign in to manage production, inventory, and compliance.",
         Font = Theme.FontBody,
         ForeColor = Theme.TextSecondary,
+        TextAlign = ContentAlignment.MiddleCenter,
         AutoSize = false,
         Width = ContentWidth,
         Height = 22,
@@ -179,6 +198,7 @@ public class LoginForm : Form
         _signInPanel.Visible = true;
         _signUpPanel.Visible = false;
         StyleToggle(active: _signInTab, inactive: _signUpTab);
+        CenterStack();
     }
 
     private void ShowSignUp()
@@ -186,6 +206,7 @@ public class LoginForm : Form
         _signInPanel.Visible = false;
         _signUpPanel.Visible = true;
         StyleToggle(active: _signUpTab, inactive: _signInTab);
+        CenterStack();
     }
 
     private static void StyleToggle(Button active, Button inactive)
@@ -245,7 +266,7 @@ public class LoginForm : Form
         errorLabel = BuildErrorLabel();
         stack.Controls.Add(errorLabel);
 
-        var createButton = new Button { Text = "Create Account", Width = ContentWidth, Height = 38, Margin = new Padding(0, 4, 0, 8) }.StyleAsPrimaryButton();
+        var createButton = new Button { Text = "Create Account", Width = ContentWidth, Height = 38, Margin = new Padding(0, 2, 0, 4) }.StyleAsPrimaryButton();
         createButton.Click += async (_, _) => await SignUpAsync();
         stack.Controls.Add(createButton);
 
@@ -285,14 +306,14 @@ public class LoginForm : Form
 
     private static Panel BuildField(string labelText, Control input)
     {
-        var panel = new Panel { Width = ContentWidth, Height = 60, Margin = new Padding(0, 0, 0, 4) };
+        var panel = new Panel { Width = ContentWidth, Height = 50, Margin = new Padding(0, 0, 0, 3) };
         var label = new Label
         {
             Text = labelText,
             Font = Theme.FontSmall,
             ForeColor = Theme.TextSecondary,
             Dock = DockStyle.Top,
-            Height = 18,
+            Height = 16,
         };
         input.Dock = DockStyle.Top;
         input.Height = 30;
@@ -309,8 +330,8 @@ public class LoginForm : Form
         ForeColor = Theme.DangerRed,
         AutoSize = false,
         Width = ContentWidth,
-        Height = 20,
-        Margin = new Padding(0, 0, 0, 4),
+        Height = 16,
+        Margin = new Padding(0, 0, 0, 2),
     };
 
     private async Task SignInAsync()
