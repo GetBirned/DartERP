@@ -8,6 +8,8 @@ namespace DartERP.WinForms.Controls;
 /// </summary>
 public class NavButton : Panel
 {
+    private const int IconSize = 18;
+
     private bool _isSelected;
     private bool _isHovered;
 
@@ -49,12 +51,15 @@ public class NavButton : Panel
             e.Graphics.FillRectangle(accentBrush, 0, 0, 4, Height);
         }
 
-        var textColor = _isSelected ? Theme.SidebarTextSelected : Theme.SidebarText;
-        var textRect = new Rectangle(24, 0, Width - 24, Height);
+        var iconColor = _isSelected ? Theme.SidebarTextSelected : Theme.SidebarText;
+        var iconBounds = new Rectangle(24, (Height - IconSize) / 2, IconSize, IconSize);
+        NavIconRenderer.Draw(e.Graphics, Text, iconBounds, iconColor);
+
+        var textRect = new Rectangle(iconBounds.Right + 12, 0, Width - iconBounds.Right - 12, Height);
         // NoPrefix: without it, "&" in a nav label (e.g. "A&D Log") is
         // treated as a mnemonic-accelerator prefix and silently stripped,
         // underlining the next character instead of just displaying "&".
-        TextRenderer.DrawText(e.Graphics, Text, Theme.FontNav, textRect, textColor,
+        TextRenderer.DrawText(e.Graphics, Text, Theme.FontNav, textRect, iconColor,
             TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPrefix);
     }
 

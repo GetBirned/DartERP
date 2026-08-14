@@ -21,7 +21,7 @@ public static class ControlStyleExtensions
         button.Cursor = Cursors.Hand;
         button.Height = 34;
         button.FlatAppearance.MouseOverBackColor = Theme.SidebarHover;
-        return button.ApplyRoundedRegion(6);
+        return button.ApplyRoundedRegion(10);
     }
 
     public static Button StyleAsSecondaryButton(this Button button)
@@ -35,7 +35,7 @@ public static class ControlStyleExtensions
         button.Cursor = Cursors.Hand;
         button.Height = 34;
         button.FlatAppearance.MouseOverBackColor = Theme.AppBackground;
-        return button.ApplyRoundedRegion(6);
+        return button.ApplyRoundedRegion(10);
     }
 
     public static Button StyleAsDangerButton(this Button button)
@@ -48,7 +48,7 @@ public static class ControlStyleExtensions
         button.Cursor = Cursors.Hand;
         button.Height = 34;
         button.FlatAppearance.MouseOverBackColor = Color.FromArgb(0xB9, 0x1C, 0x1C);
-        return button.ApplyRoundedRegion(6);
+        return button.ApplyRoundedRegion(10);
     }
 
     public static void StyleAsDataGrid(this DataGridView grid)

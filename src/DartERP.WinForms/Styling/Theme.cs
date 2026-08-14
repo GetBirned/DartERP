@@ -167,12 +167,12 @@ public static class Theme
     public static Color DangerRed => _current.DangerRed;
     public static Color NeutralGray => _current.NeutralGray;
 
-    public static readonly Font FontHeader = new("Segoe UI", 18F, FontStyle.Bold);
-    public static readonly Font FontSubheader = new("Segoe UI", 12F, FontStyle.Bold);
-    public static readonly Font FontBody = new("Segoe UI", 9.75F, FontStyle.Regular);
-    public static readonly Font FontBodyBold = new("Segoe UI", 9.75F, FontStyle.Bold);
-    public static readonly Font FontSmall = new("Segoe UI", 8.5F, FontStyle.Regular);
-    public static readonly Font FontKpiValue = new("Segoe UI", 22F, FontStyle.Bold);
-    public static readonly Font FontNav = new("Segoe UI", 10F, FontStyle.Regular);
-    public static readonly Font FontBrand = new("Segoe UI", 14F, FontStyle.Bold);
+    public static readonly Font FontHeader = new(AppFonts.InterFamily, 18F, FontStyle.Bold);
+    public static readonly Font FontSubheader = new(AppFonts.InterFamily, 12F, FontStyle.Bold);
+    public static readonly Font FontBody = new(AppFonts.InterFamily, 9.75F, FontStyle.Regular);
+    public static readonly Font FontBodyBold = new(AppFonts.InterFamily, 9.75F, FontStyle.Bold);
+    public static readonly Font FontSmall = new(AppFonts.InterFamily, 8.5F, FontStyle.Regular);
+    public static readonly Font FontKpiValue = new(AppFonts.InterFamily, 22F, FontStyle.Bold);
+    public static readonly Font FontNav = new(AppFonts.InterFamily, 10F, FontStyle.Regular);
+    public static readonly Font FontBrand = new(AppFonts.InterFamily, 14F, FontStyle.Bold);
 }

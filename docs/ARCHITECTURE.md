@@ -18,6 +18,15 @@ DartERP.Core                Models, Enums, DTOs, repository interfaces — no pr
 - `AddDbContextFactory<DartErpDbContext>` — see below for why a factory instead of a plain `AddDbContext`
 - Repositories and services registered as `Singleton`. WinForms has no per-request scope the way ASP.NET Core does, and every repository is now cheap and stateless (it holds only the `IDbContextFactory`, no state of its own — see below), so `Singleton` is simpler than manufacturing an artificial "scope" concept for a desktop app.
 - `MainForm` itself is resolved from the container so its constructor can take `IServiceProvider` and resolve each module's service on demand as the user navigates.
+- `MainForm` and `LoginForm` specifically are `Transient`, not `Singleton` — logging out needs a brand-new `MainForm` next time (fresh header identity for whoever signs in next) and a fresh `LoginForm` on every pass through `Program.cs`'s sign-in loop. Everything they depend on stays `Singleton` as usual; only the forms themselves get re-created.
+
+## Authentication
+
+`Program.cs`'s `Main()` wraps the whole app in a loop: show `LoginForm` (`ShowDialog()`), and only if it returns `DialogResult.OK` does it resolve and run a `MainForm`. `MainForm.LoggedOut` (set right before `Close()` on the account menu's Log Out) tells the loop whether to go around again (back to a fresh `LoginForm`) or exit for good — a plain window close leaves `LoggedOut` false, so that path behaves exactly like the app did before auth existed.
+
+`CurrentUserContext` (`Application/CurrentUserContext.cs`) is a `Singleton` holding whoever's currently signed in, mutated in place by `SignIn`/`SignOut` — same reasoning as every other `Singleton` in this container: WinForms has no per-request scope to hang a "session" off of, so the simplest correct answer is a container-wide singleton that gets updated rather than replaced.
+
+`PasswordHasher` (PBKDF2 via `Rfc2898DeriveBytes`, no third-party package) lives in `DartERP.Core`, not `Application`, even though hashing feels like business logic — `Infrastructure`'s `DbSeeder` needs to hash the seeded demo users' passwords at startup, and `Infrastructure` only references `Core`, not `Application`. `Core` is the one project both already depend on, so that's where anything both layers need has to live.
 
 ## Why `IDbContextFactory<T>` instead of an injected `DbContext`
 

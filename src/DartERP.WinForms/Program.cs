@@ -1,3 +1,4 @@
+using DartERP.Application;
 using DartERP.Application.Services;
 using DartERP.Core.Interfaces;
 using DartERP.Infrastructure.Data;
@@ -32,8 +33,26 @@ static class Program
 
         EnsureDatabaseReady(serviceProvider);
 
-        var mainForm = serviceProvider.GetRequiredService<MainForm>();
-        System.Windows.Forms.Application.Run(mainForm);
+        var currentUserContext = serviceProvider.GetRequiredService<CurrentUserContext>();
+
+        // Loops back to the login screen after a Log Out (MainForm.LoggedOut)
+        // rather than exiting the process — a plain window close (X button)
+        // has LoggedOut still false, so that falls through and ends the app
+        // like normal.
+        while (true)
+        {
+            using var loginForm = serviceProvider.GetRequiredService<LoginForm>();
+            if (loginForm.ShowDialog() != DialogResult.OK)
+                break;
+
+            using var mainForm = serviceProvider.GetRequiredService<MainForm>();
+            System.Windows.Forms.Application.Run(mainForm);
+
+            if (!mainForm.LoggedOut)
+                break;
+
+            currentUserContext.SignOut();
+        }
     }
 
     private static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
@@ -51,6 +70,7 @@ static class Program
         services.AddSingleton<ISerializedItemRepository, SerializedItemRepository>();
         services.AddSingleton<IQualityInspectionRepository, QualityInspectionRepository>();
         services.AddSingleton<IDispositionRepository, DispositionRepository>();
+        services.AddSingleton<IUserRepository, UserRepository>();
 
         services.AddSingleton<CustomerService>();
         services.AddSingleton<VendorService>();
@@ -62,8 +82,16 @@ static class Program
         services.AddSingleton<QualityInspectionService>();
         services.AddSingleton<DispositionService>();
         services.AddSingleton<DashboardService>();
+        services.AddSingleton<UserService>();
+        services.AddSingleton<CurrentUserContext>();
 
-        services.AddSingleton<MainForm>();
+        // Transient, not Singleton, on purpose — logging out needs a brand
+        // new MainForm next time (fresh header identity for whoever signs
+        // in next) and a fresh LoginForm each pass through the loop above.
+        // Everything they depend on (the services above) stays Singleton;
+        // only the forms themselves get re-created.
+        services.AddTransient<LoginForm>();
+        services.AddTransient<MainForm>();
     }
 
     /// <summary>

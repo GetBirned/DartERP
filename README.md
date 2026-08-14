@@ -25,8 +25,18 @@ I work professionally with ERP implementations — SQL Server, REST APIs, third-
 - **Serialized Inventory** — unique serial number generation and tracking for serialized finished goods, tied to the work order that produced them
 - **Quality Control** — Pending/Passed/Failed inspections against serialized items
 - **A&D Log** — ATF-style Acquisition & Disposition tracking: a permanent record of where every serialized item went (Sold/Transferred/Destroyed/Returned) and to whom, with Sold/Transferred requiring a recipient. Recording a disposition also updates the item's inventory status, so Serialized Inventory and the A&D Log never disagree
+- **Authentication & User Accounts** — sign in/sign up on a branded login screen (looping video background via WebView2), PBKDF2-hashed passwords (salted, one-way — never stored in plain text), a profile menu (avatar, display name, role, phone, email, picture upload, change password), a lock screen that re-prompts for a password without ending the session, and a true log-out that returns to a fresh sign-in
 
 Sales Orders and a REST API were scoped out to keep the core workflow polished within the available time — see [Future Improvements](#future-improvements).
+
+### Demo Login
+
+```
+Username: admin
+Password: Password123!
+```
+
+Two other seeded accounts (`jmorales`, `dcarter`) use the same password if you want to see a different name/role in the header. This is fictional demo data for a portfolio project — real deployments would obviously never document a shared password like this.
 
 ## Technology Stack
 
@@ -69,16 +79,18 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for more detail and [docs/DATAB
 | ![Products](screenshots/04_products.png) | ![Inventory](screenshots/05_inventory.png) |
 | ![Purchase Orders](screenshots/06_purchase_orders.png) | ![Work Orders](screenshots/07_work_orders.png) |
 | ![Serialized Inventory](screenshots/08_serialized_inventory.png) | ![Quality Control](screenshots/09_quality_control.png) |
+| ![Sign In](screenshots/10_login.png) | ![Settings](screenshots/11_settings.png) |
 
 ## Database Design
 
-Nine tables: `Customers`, `Vendors`, `Products`, `PurchaseOrders`/`PurchaseOrderLines`, `WorkOrders`, `SerializedItems`, `QualityInspections`, `Dispositions`. Unique indexes on `CustomerNumber`, `VendorNumber`, `SKU`, `PurchaseOrderNumber`, `WorkOrderNumber`, and `SerialNumber`. Full details and an ERD in [docs/DATABASE.md](docs/DATABASE.md).
+Ten tables: `Customers`, `Vendors`, `Products`, `PurchaseOrders`/`PurchaseOrderLines`, `WorkOrders`, `SerializedItems`, `QualityInspections`, `Dispositions`, `Users`. Unique indexes on `CustomerNumber`, `VendorNumber`, `SKU`, `PurchaseOrderNumber`, `WorkOrderNumber`, `SerialNumber`, and `Username`. Full details and an ERD in [docs/DATABASE.md](docs/DATABASE.md).
 
 ## Prerequisites
 
 - [Visual Studio 2022](https://visualstudio.microsoft.com/) (Community or higher) with the **.NET desktop development** workload
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 - **SQL Server Express LocalDB** — installable as an individual component from the Visual Studio Installer, or standalone via the [SQL Server Express installer](https://www.microsoft.com/en-us/sql-server/sql-server-downloads)
+- **WebView2 Runtime** — powers the login screen's video background. Ships with Windows 11 and rides along with Edge updates on Windows 10, so most machines already have it; if not, it's a small standalone install from [Microsoft](https://developer.microsoft.com/microsoft-edge/webview2/). The login screen falls back to a static branded panel if it's genuinely unavailable.
 - Git
 
 Verify your environment:
@@ -134,12 +146,12 @@ dotnet ef database update --project src/DartERP.Infrastructure/DartERP.Infrastru
 dotnet test tests/DartERP.Tests/DartERP.Tests.csproj
 ```
 
-27 xUnit tests cover the core business rules: purchase order validation (active vendor, line requirements, non-negative quantities/costs) and total calculations, unique serial number generation and the serialized-product requirement, work order date ordering and locked-status edits, unique SKU enforcement, customer number generation, and disposition recording (recipient required for Sold/Transferred, inventory status updates on disposal). Tests run against lightweight in-memory fake repositories rather than a real database.
+36 xUnit tests cover the core business rules: purchase order validation (active vendor, line requirements, non-negative quantities/costs) and total calculations, unique serial number generation and the serialized-product requirement, work order date ordering and locked-status edits, unique SKU enforcement, customer number generation, disposition recording (recipient required for Sold/Transferred, inventory status updates on disposal), password hashing (salted, verifiable, never reversible), and account rules (duplicate usernames, wrong-password rejection, inactive accounts can't sign in). Tests run against lightweight in-memory fake repositories rather than a real database.
 
 ## Future Improvements
 
 - **Sales Orders** — customer-facing order module mirroring Purchase Orders, cut to keep the core workflow polished within the timeline
 - **REST API** — a thin HTTP layer over the Application services, for integration scenarios
-- Role-based access control (the app currently has no concept of a logged-in user)
+- Role-based access control — `Role` on `User` is a display field today (shown on the profile and header), not an enforced permission set; every signed-in user can reach every screen
 - Audit history on status transitions (who changed a PO from Draft to Submitted, and when)
 - Barcode/label printing for serialized inventory

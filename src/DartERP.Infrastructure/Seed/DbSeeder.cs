@@ -1,5 +1,6 @@
 using DartERP.Core.Enums;
 using DartERP.Core.Models;
+using DartERP.Core.Security;
 using DartERP.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,6 +16,10 @@ public static class DbSeeder
     {
         if (await context.Customers.AnyAsync())
             return;
+
+        var users = SeedUsers();
+        context.Users.AddRange(users);
+        await context.SaveChangesAsync();
 
         var customers = SeedCustomers();
         var vendors = SeedVendors();
@@ -45,6 +50,20 @@ public static class DbSeeder
         context.Dispositions.AddRange(dispositions);
         await context.SaveChangesAsync();
     }
+
+    // Demo password is intentionally the same across every seeded user and
+    // documented plainly in the README — this is fictional demo data for a
+    // portfolio project, not a real deployment, so there's no secret to
+    // protect here. Real user creation goes through UserService.RegisterAsync,
+    // which runs it through PasswordHasher exactly like this does.
+    private const string DemoPassword = "Password123!";
+
+    private static List<User> SeedUsers() =>
+    [
+        new() { Username = "admin", Email = "alex.reyes@dartermanufacturing.example", PasswordHash = PasswordHasher.Hash(DemoPassword), DisplayName = "Alex Reyes", Role = "Plant Administrator", Phone = "603-555-0110", IsActive = true },
+        new() { Username = "jmorales", Email = "jenna.morales@dartermanufacturing.example", PasswordHash = PasswordHasher.Hash(DemoPassword), DisplayName = "Jenna Morales", Role = "Production Supervisor", Phone = "603-555-0121", IsActive = true },
+        new() { Username = "dcarter", Email = "derek.carter@dartermanufacturing.example", PasswordHash = PasswordHasher.Hash(DemoPassword), DisplayName = "Derek Carter", Role = "Compliance Officer", Phone = "603-555-0132", IsActive = true },
+    ];
 
     private static List<Customer> SeedCustomers() =>
     [

@@ -74,6 +74,17 @@ erDiagram
         string Type
         string Notes
     }
+    USER {
+        int UserId PK
+        string Username UK
+        string Email
+        string PasswordHash
+        string DisplayName
+        string Role
+        string Phone
+        string ProfilePicturePath
+        bool IsActive
+    }
 
     VENDOR ||--o{ PURCHASE_ORDER : "supplies"
     PURCHASE_ORDER ||--o{ PURCHASE_ORDER_LINE : "contains"
@@ -86,7 +97,7 @@ erDiagram
     CUSTOMER ||--o{ DISPOSITION : "receives"
 ```
 
-`Customer`'s only foreign key relationship in the current schema is `Disposition` (a Sold/Transferred disposition's recipient) — Sales Orders, which would link a customer to an order, were cut from this build (see the README's Future Improvements).
+`Customer`'s only foreign key relationship in the current schema is `Disposition` (a Sold/Transferred disposition's recipient) — Sales Orders, which would link a customer to an order, were cut from this build (see the README's Future Improvements). `User` has no foreign key relationships at all — nothing in the schema references who created or modified a record yet (see Future Improvements: audit history).
 
 ## Tables
 
@@ -101,6 +112,7 @@ erDiagram
 | `SerializedItems` | Unique index on `SerialNumber`, enforced at both the database (unique index) and application layer (`ISerializedItemRepository.SerialNumberExistsAsync`, checked before insert). FKs to `Products` and `WorkOrders` are `Restrict`. |
 | `QualityInspections` | FK to `SerializedItems` is `Cascade` — inspections are owned by the item they're inspecting. |
 | `Dispositions` | The ATF-style Acquisition & Disposition log — one row per serialized item leaving/re-entering inventory (Sold/Transferred/Destroyed/Returned). FK to `SerializedItems` is `Cascade`. FK to `Customers` is `Restrict` (nullable — only Sold/Transferred dispositions require a recipient) since customers are soft-deleted, never hard-deleted. `Type` stored as its enum name. |
+| `Users` | Unique index on `Username`. `PasswordHash` holds a self-describing PBKDF2 string (`{iterations}.{salt}.{hash}`, all Base64) — never the plain password, and not reversible. `ProfilePicturePath` is nullable and points at a file under the local machine's `%LocalAppData%\DartERP\ProfilePictures`, not a column full of image bytes. Soft-deactivated via `IsActive`, same convention as `Customers`/`Vendors`. |
 
 ## Why `Restrict` almost everywhere, `Cascade` only for true parent/child pairs
 
@@ -117,4 +129,4 @@ dotnet ef database update --project src/DartERP.Infrastructure/DartERP.Infrastru
 
 ## Seed data
 
-`DartERP.Infrastructure.Seed.DbSeeder` runs once at application startup (idempotent — it no-ops if `Customers` already has rows) and inserts realistic fictional data: 6 customers, 6 vendors (one inactive, to demonstrate active-only filtering), 9 products across raw material/component/packaging/finished-product categories, 7 purchase orders spanning every status, 6 work orders, 28 serialized items, 28 quality inspections, and a disposition for every already-`Shipped` serialized item — enough that every screen, including the dashboard, is populated on first launch.
+`DartERP.Infrastructure.Seed.DbSeeder` runs once at application startup (idempotent — it no-ops if `Customers` already has rows) and inserts realistic fictional data: 3 demo users (see the README's Demo Login section), 6 customers, 6 vendors (one inactive, to demonstrate active-only filtering), 9 products across raw material/component/packaging/finished-product categories, 7 purchase orders spanning every status, 6 work orders, 28 serialized items, 28 quality inspections, and a disposition for every already-`Shipped` serialized item — enough that every screen, including the dashboard, is populated on first launch.
