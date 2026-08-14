@@ -243,7 +243,7 @@ public class MainForm : Form
         var brandPanel = new Panel
         {
             Dock = DockStyle.Top,
-            Height = 106,
+            Height = 96,
             BackColor = Theme.SidebarBackground,
         };
 
@@ -255,22 +255,9 @@ public class MainForm : Form
             SizeMode = PictureBoxSizeMode.Zoom,
             Dock = DockStyle.Fill,
         };
-        var logoHost = new Panel { Dock = DockStyle.Top, Height = 78, Padding = new Padding(24, 20, 24, 0) };
+        var logoHost = new Panel { Dock = DockStyle.Fill, Padding = new Padding(24, 20, 24, 20) };
         logoHost.Controls.Add(logoBox);
 
-        var subLabel = new Label
-        {
-            Text = "DERP Manufacturing System",
-            Font = Theme.FontSmall,
-            ForeColor = Theme.SidebarText,
-            AutoSize = false,
-            Dock = DockStyle.Top,
-            Height = 22,
-            Padding = new Padding(24, 4, 0, 0),
-            TextAlign = ContentAlignment.MiddleLeft,
-        };
-
-        brandPanel.Controls.Add(subLabel);
         brandPanel.Controls.Add(logoHost);
 
         return brandPanel;

@@ -3,10 +3,18 @@
 <head>
 <meta charset="utf-8" />
 <style>
+  /* This page renders inside WebView2 (a real Chromium engine), which has
+     its own font stack entirely separate from the GDI+ PrivateFontCollection
+     the rest of the WinForms app uses (Styling/AppFonts.cs) — loading Inter
+     there doesn't make it available here too. Same two bundled TTFs, loaded
+     the web way instead, so this one bit of on-screen text matches the font
+     everywhere else in the app. */
+  @font-face { font-family: "Inter"; src: url("Fonts/Inter-Regular.ttf") format("truetype"); font-weight: 400; }
+  @font-face { font-family: "Inter"; src: url("Fonts/Inter-Bold.ttf") format("truetype"); font-weight: 700; }
   html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0a0a0a; }
   video { width: 100%; height: 100%; object-fit: cover; display: block; }
   .overlay { position: fixed; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0) 45%); }
-  .wordmark { position: fixed; left: 28px; bottom: 22px; color: #fff; font-family: "Segoe UI", sans-serif; font-size: 13px; letter-spacing: 0.5px; opacity: 0.9; }
+  .wordmark { position: fixed; left: 28px; bottom: 22px; color: #fff; font-family: "Inter", sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.5px; opacity: 0.9; }
 </style>
 </head>
 <body>
