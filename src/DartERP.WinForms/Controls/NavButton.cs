@@ -51,8 +51,11 @@ public class NavButton : Panel
 
         var textColor = _isSelected ? Theme.SidebarTextSelected : Theme.SidebarText;
         var textRect = new Rectangle(24, 0, Width - 24, Height);
+        // NoPrefix: without it, "&" in a nav label (e.g. "A&D Log") is
+        // treated as a mnemonic-accelerator prefix and silently stripped,
+        // underlining the next character instead of just displaying "&".
         TextRenderer.DrawText(e.Graphics, Text, Theme.FontNav, textRect, textColor,
-            TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
+            TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPrefix);
     }
 
     protected override void OnMouseDown(MouseEventArgs e)

@@ -66,6 +66,14 @@ erDiagram
         string Inspector
         string Result
     }
+    DISPOSITION {
+        int DispositionId PK
+        int SerializedItemId FK
+        int CustomerId FK
+        datetime DispositionDate
+        string Type
+        string Notes
+    }
 
     VENDOR ||--o{ PURCHASE_ORDER : "supplies"
     PURCHASE_ORDER ||--o{ PURCHASE_ORDER_LINE : "contains"
@@ -74,9 +82,11 @@ erDiagram
     PRODUCT ||--o{ SERIALIZED_ITEM : "instance of"
     WORK_ORDER ||--o{ SERIALIZED_ITEM : "produces"
     SERIALIZED_ITEM ||--o{ QUALITY_INSPECTION : "inspected via"
+    SERIALIZED_ITEM ||--o{ DISPOSITION : "disposed via"
+    CUSTOMER ||--o{ DISPOSITION : "receives"
 ```
 
-`Customer` has no foreign key relationships in the current schema — Sales Orders, which would link a customer to an order, were cut from this build (see the README's Future Improvements).
+`Customer`'s only foreign key relationship in the current schema is `Disposition` (a Sold/Transferred disposition's recipient) — Sales Orders, which would link a customer to an order, were cut from this build (see the README's Future Improvements).
 
 ## Tables
 
@@ -90,10 +100,11 @@ erDiagram
 | `WorkOrders` | Unique index on `WorkOrderNumber`. FK to `Products` is `Restrict`. |
 | `SerializedItems` | Unique index on `SerialNumber`, enforced at both the database (unique index) and application layer (`ISerializedItemRepository.SerialNumberExistsAsync`, checked before insert). FKs to `Products` and `WorkOrders` are `Restrict`. |
 | `QualityInspections` | FK to `SerializedItems` is `Cascade` — inspections are owned by the item they're inspecting. |
+| `Dispositions` | The ATF-style Acquisition & Disposition log — one row per serialized item leaving/re-entering inventory (Sold/Transferred/Destroyed/Returned). FK to `SerializedItems` is `Cascade`. FK to `Customers` is `Restrict` (nullable — only Sold/Transferred dispositions require a recipient) since customers are soft-deleted, never hard-deleted. `Type` stored as its enum name. |
 
 ## Why `Restrict` almost everywhere, `Cascade` only for true parent/child pairs
 
-`PurchaseOrder → PurchaseOrderLine` and `SerializedItem → QualityInspection` are the only two relationships where the child genuinely has no independent existence — a line isn't meaningful without its order, an inspection isn't meaningful without the item it inspected. Everywhere else (`Vendor → PurchaseOrder`, `Product → WorkOrder`, etc.) uses `Restrict`, because those parent records are soft-deleted rather than removed, so an accidental cascade delete should never be possible in practice — but `Restrict` makes that a guarantee enforced by the database, not just a convention.
+`PurchaseOrder → PurchaseOrderLine`, `SerializedItem → QualityInspection`, and `SerializedItem → Disposition` are the only relationships where the child genuinely has no independent existence — a line isn't meaningful without its order, an inspection isn't meaningful without the item it inspected, a disposition isn't meaningful without the item it disposed of. Everywhere else (`Vendor → PurchaseOrder`, `Product → WorkOrder`, `Customer → Disposition`, etc.) uses `Restrict`, because those parent records are soft-deleted rather than removed, so an accidental cascade delete should never be possible in practice — but `Restrict` makes that a guarantee enforced by the database, not just a convention.
 
 ## Migrations
 
@@ -106,4 +117,4 @@ dotnet ef database update --project src/DartERP.Infrastructure/DartERP.Infrastru
 
 ## Seed data
 
-`DartERP.Infrastructure.Seed.DbSeeder` runs once at application startup (idempotent — it no-ops if `Customers` already has rows) and inserts realistic fictional data: 6 customers, 6 vendors (one inactive, to demonstrate active-only filtering), 9 products across raw material/component/packaging/finished-product categories, 7 purchase orders spanning every status, 6 work orders, 28 serialized items, and 28 quality inspections — enough that every screen, including the dashboard, is populated on first launch.
+`DartERP.Infrastructure.Seed.DbSeeder` runs once at application startup (idempotent — it no-ops if `Customers` already has rows) and inserts realistic fictional data: 6 customers, 6 vendors (one inactive, to demonstrate active-only filtering), 9 products across raw material/component/packaging/finished-product categories, 7 purchase orders spanning every status, 6 work orders, 28 serialized items, 28 quality inspections, and a disposition for every already-`Shipped` serialized item — enough that every screen, including the dashboard, is populated on first launch.

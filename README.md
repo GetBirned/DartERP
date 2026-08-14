@@ -24,6 +24,7 @@ I work professionally with ERP implementations — SQL Server, REST APIs, third-
 - **Work Orders** — production orders against a product with Planned → Released → In Production → Quality Control → Completed/Cancelled status; completed or cancelled orders are locked against further edits
 - **Serialized Inventory** — unique serial number generation and tracking for serialized finished goods, tied to the work order that produced them
 - **Quality Control** — Pending/Passed/Failed inspections against serialized items
+- **A&D Log** — ATF-style Acquisition & Disposition tracking: a permanent record of where every serialized item went (Sold/Transferred/Destroyed/Returned) and to whom, with Sold/Transferred requiring a recipient. Recording a disposition also updates the item's inventory status, so Serialized Inventory and the A&D Log never disagree
 
 Sales Orders and a REST API were scoped out to keep the core workflow polished within the available time — see [Future Improvements](#future-improvements).
 
@@ -71,7 +72,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for more detail and [docs/DATAB
 
 ## Database Design
 
-Eight tables: `Customers`, `Vendors`, `Products`, `PurchaseOrders`/`PurchaseOrderLines`, `WorkOrders`, `SerializedItems`, `QualityInspections`. Unique indexes on `CustomerNumber`, `VendorNumber`, `SKU`, `PurchaseOrderNumber`, `WorkOrderNumber`, and `SerialNumber`. Full details and an ERD in [docs/DATABASE.md](docs/DATABASE.md).
+Nine tables: `Customers`, `Vendors`, `Products`, `PurchaseOrders`/`PurchaseOrderLines`, `WorkOrders`, `SerializedItems`, `QualityInspections`, `Dispositions`. Unique indexes on `CustomerNumber`, `VendorNumber`, `SKU`, `PurchaseOrderNumber`, `WorkOrderNumber`, and `SerialNumber`. Full details and an ERD in [docs/DATABASE.md](docs/DATABASE.md).
 
 ## Prerequisites
 
@@ -133,7 +134,7 @@ dotnet ef database update --project src/DartERP.Infrastructure/DartERP.Infrastru
 dotnet test tests/DartERP.Tests/DartERP.Tests.csproj
 ```
 
-21 xUnit tests cover the core business rules: purchase order validation (active vendor, line requirements, non-negative quantities/costs) and total calculations, unique serial number generation and the serialized-product requirement, work order date ordering and locked-status edits, unique SKU enforcement, and customer number generation. Tests run against lightweight in-memory fake repositories rather than a real database.
+27 xUnit tests cover the core business rules: purchase order validation (active vendor, line requirements, non-negative quantities/costs) and total calculations, unique serial number generation and the serialized-product requirement, work order date ordering and locked-status edits, unique SKU enforcement, customer number generation, and disposition recording (recipient required for Sold/Transferred, inventory status updates on disposal). Tests run against lightweight in-memory fake repositories rather than a real database.
 
 ## Future Improvements
 

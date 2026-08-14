@@ -50,6 +50,7 @@ static class Program
         services.AddSingleton<IWorkOrderRepository, WorkOrderRepository>();
         services.AddSingleton<ISerializedItemRepository, SerializedItemRepository>();
         services.AddSingleton<IQualityInspectionRepository, QualityInspectionRepository>();
+        services.AddSingleton<IDispositionRepository, DispositionRepository>();
 
         services.AddSingleton<CustomerService>();
         services.AddSingleton<VendorService>();
@@ -59,6 +60,7 @@ static class Program
         services.AddSingleton<WorkOrderService>();
         services.AddSingleton<SerializedItemService>();
         services.AddSingleton<QualityInspectionService>();
+        services.AddSingleton<DispositionService>();
         services.AddSingleton<DashboardService>();
 
         services.AddSingleton<MainForm>();

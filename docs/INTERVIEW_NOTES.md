@@ -4,12 +4,13 @@ Quick-reference talking points. Not meant to be read top to bottom — skim befo
 
 ## The 30-second pitch
 
-"I work with ERP software professionally — implementations, SQL Server, integrations, data migration — and wanted to build a manufacturing ERP from the development side. DartERP is a WinForms desktop app over Entity Framework Core and SQL Server, with an application/service layer that owns the business rules — vendor status checks, PO line requirements, unique serial numbers — so validation isn't scattered across UI event handlers. It covers customers, vendors, products/inventory, purchase orders, work orders, serialized inventory, and quality control, with a dashboard that's wired to live queries, not hardcoded numbers."
+"I work with ERP software professionally — implementations, SQL Server, integrations, data migration — and wanted to build a manufacturing ERP from the development side. DartERP is a WinForms desktop app over Entity Framework Core and SQL Server, with an application/service layer that owns the business rules — vendor status checks, PO line requirements, unique serial numbers — so validation isn't scattered across UI event handlers. It covers customers, vendors, products/inventory, purchase orders, work orders, serialized inventory, quality control, and ATF-style acquisition & disposition tracking, with a dashboard that's wired to live queries, not hardcoded numbers."
 
 ## What DartERP is
 
 - Internal ERP for a fictional manufacturing company (firearms-industry flavor, zero engineering/technical data — products are pure business records: SKU, cost, price, quantity)
-- Demo flow: Dashboard → Customers → Vendors → Products/Inventory → Purchase Orders → Work Orders → Serialized Inventory → Quality Control
+- Demo flow: Dashboard → Customers → Vendors → Products/Inventory → Purchase Orders → Work Orders → Serialized Inventory → Quality Control → A&D Log
+- The A&D Log models a real regulatory concept (the ATF bound book) purely as a compliance/business record — who received each serialized item and how it left inventory — no different in kind from any other audit trail an ERP tracks
 - Scoped deliberately: Sales Orders and a REST API were cut to keep the core loop polished, not left half-built
 
 ## Architecture

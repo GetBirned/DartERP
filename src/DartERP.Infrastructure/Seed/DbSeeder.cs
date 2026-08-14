@@ -40,6 +40,10 @@ public static class DbSeeder
         var inspections = SeedQualityInspections(serializedItems);
         context.QualityInspections.AddRange(inspections);
         await context.SaveChangesAsync();
+
+        var dispositions = SeedDispositions(serializedItems, customers);
+        context.Dispositions.AddRange(dispositions);
+        await context.SaveChangesAsync();
     }
 
     private static List<Customer> SeedCustomers() =>
@@ -245,5 +249,33 @@ public static class DbSeeder
         }
 
         return inspections;
+    }
+
+    private static List<Disposition> SeedDispositions(List<SerializedItem> serializedItems, List<Customer> customers)
+    {
+        // Every already-Shipped item in the seed data should have a bound-book
+        // entry explaining where it went — otherwise Serialized Inventory and
+        // the A&D Log would disagree with each other on first launch.
+        var shippedUnits = serializedItems.Where(s => s.Status == SerializedItemStatus.Shipped).ToList();
+        var activeCustomers = customers.Where(c => c.IsActive).ToList();
+        var dispositions = new List<Disposition>();
+
+        for (var i = 0; i < shippedUnits.Count; i++)
+        {
+            var unit = shippedUnits[i];
+            var customer = activeCustomers[i % activeCustomers.Count];
+            var isTransfer = i == shippedUnits.Count - 1;
+
+            dispositions.Add(new Disposition
+            {
+                SerializedItem = unit,
+                Customer = customer,
+                DispositionDate = unit.CreatedDate.AddDays(2 + i),
+                Type = isTransfer ? DispositionType.Transferred : DispositionType.Sold,
+                Notes = isTransfer ? "Interstate transfer, distributor-to-dealer." : string.Empty,
+            });
+        }
+
+        return dispositions;
     }
 }

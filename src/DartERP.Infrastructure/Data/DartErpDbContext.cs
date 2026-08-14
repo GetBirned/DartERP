@@ -17,6 +17,7 @@ public class DartErpDbContext : DbContext
     public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
     public DbSet<SerializedItem> SerializedItems => Set<SerializedItem>();
     public DbSet<QualityInspection> QualityInspections => Set<QualityInspection>();
+    public DbSet<Disposition> Dispositions => Set<Disposition>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

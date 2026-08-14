@@ -14,4 +14,5 @@ public class SerializedItem
     public Product? Product { get; set; }
     public WorkOrder? WorkOrder { get; set; }
     public ICollection<QualityInspection> Inspections { get; set; } = new List<QualityInspection>();
+    public ICollection<Disposition> Dispositions { get; set; } = new List<Disposition>();
 }

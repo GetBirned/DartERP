@@ -93,6 +93,7 @@ public class MainForm : Form
         _pageTitleLabel = new Label
         {
             Text = _currentModuleName,
+            UseMnemonic = false, // module names like "A&D Log" shouldn't treat & as an accelerator prefix
             Font = Theme.FontSubheader,
             ForeColor = Theme.TextPrimary,
             AutoSize = false,
@@ -257,6 +258,10 @@ public class MainForm : Form
         ["Quality Control"] = () => new QualityControlListControl(
             _serviceProvider.GetRequiredService<QualityInspectionService>(),
             _serviceProvider.GetRequiredService<SerializedItemService>()),
+        ["A&D Log"] = () => new DispositionListControl(
+            _serviceProvider.GetRequiredService<DispositionService>(),
+            _serviceProvider.GetRequiredService<SerializedItemService>(),
+            _serviceProvider.GetRequiredService<CustomerService>()),
     };
 
     public void NavigateTo(string moduleName)
