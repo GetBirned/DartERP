@@ -70,7 +70,19 @@ public class LetterSpacedLabel : Label
             SetBkMode(hdc, Transparent);
             SetTextColor(hdc, ColorTranslator.ToWin32(ForeColor));
 
-            var rect = new RECT { Left = 0, Top = 0, Right = ClientSize.Width, Bottom = ClientSize.Height };
+            // NOTE: bit me on the very first screen that used this — Padding
+            // is a real property on the base Label, so it's easy to assume
+            // it's still honored once you override OnPaint. It's not; the
+            // base implementation is what actually applies it, and skipping
+            // it here means DrawText happily draws from x=0, flush against
+            // the edge, no matter what Padding.Left says.
+            var rect = new RECT
+            {
+                Left = Padding.Left,
+                Top = Padding.Top,
+                Right = ClientSize.Width - Padding.Right,
+                Bottom = ClientSize.Height - Padding.Bottom,
+            };
             var flags = DtSingleLine | DtNoPrefix | DtVCenter | AlignmentFlag(TextAlign);
             DrawText(hdc, Text, Text.Length, ref rect, flags);
 
