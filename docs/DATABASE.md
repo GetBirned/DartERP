@@ -118,6 +118,10 @@ erDiagram
 
 `PurchaseOrder → PurchaseOrderLine`, `SerializedItem → QualityInspection`, and `SerializedItem → Disposition` are the only relationships where the child genuinely has no independent existence — a line isn't meaningful without its order, an inspection isn't meaningful without the item it inspected, a disposition isn't meaningful without the item it disposed of. Everywhere else (`Vendor → PurchaseOrder`, `Product → WorkOrder`, `Customer → Disposition`, etc.) uses `Restrict`, because those parent records are soft-deleted rather than removed, so an accidental cascade delete should never be possible in practice — but `Restrict` makes that a guarantee enforced by the database, not just a convention.
 
+## Database Explorer
+
+The in-app "Database" screen (`Controls/DatabaseExplorerControl.cs`) is a generic, read-only browser over these same tables — minus `PurchaseOrderLines`, which has no repository of its own (lines are only ever touched through the `PurchaseOrder` aggregate). It binds a `DataGridView` straight to whichever repository's plain `GetAllAsync()` the user picks, with `AutoGenerateColumns` building the column set via reflection rather than the hand-curated columns every other grid in this app uses. Navigation/collection properties (e.g. `Product.WorkOrders`) are hidden by a generic "is this a scalar type" check on each column's `ValueType`, since a plain `GetAllAsync()` never `.Include()`s them anyway — they'd otherwise show up blank or as an unhelpful `ToString()`. Column-header clicks sort the currently-loaded rows via reflection (ascending, then descending on a second click) — `List<T>` doesn't support that out of the box, so it's driven from the grid's `ColumnHeaderMouseClick` event instead of relying on data-binding to provide it.
+
 ## Migrations
 
 ```bash

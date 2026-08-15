@@ -47,6 +47,9 @@ public static class NavIconRenderer
             case "A&D Log":
                 DrawLedger(g, pen, bounds);
                 break;
+            case "Database":
+                DrawDatabase(g, pen, bounds);
+                break;
             case "Settings":
                 DrawSliders(g, pen, bounds);
                 break;
@@ -208,6 +211,21 @@ public static class NavIconRenderer
             g.DrawLine(pen, b.Left + b.Width * 0.12f, y, b.Left + b.Width * 0.12f + lineWidth, y);
             g.DrawLine(pen, spineX + b.Width * 0.08f, y, spineX + b.Width * 0.08f + lineWidth, y);
         }
+    }
+
+    private static void DrawDatabase(Graphics g, Pen pen, Rectangle b)
+    {
+        var capHeight = b.Height * 0.32f;
+        var sideTop = b.Top + capHeight / 2f;
+        var sideBottom = b.Bottom - capHeight / 2f;
+
+        g.DrawEllipse(pen, b.Left, b.Top, b.Width, capHeight);
+        g.DrawLine(pen, b.Left, sideTop, b.Left, sideBottom);
+        g.DrawLine(pen, b.Right, sideTop, b.Right, sideBottom);
+        g.DrawArc(pen, b.Left, b.Bottom - capHeight, b.Width, capHeight, 0, 180);
+
+        var midY = sideTop + (sideBottom - sideTop) / 2f - capHeight / 2f;
+        g.DrawArc(pen, b.Left, midY, b.Width, capHeight, 0, 180);
     }
 
     private static void DrawSliders(Graphics g, Pen pen, Rectangle b)

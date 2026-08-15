@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using DartERP.Application;
 using DartERP.Application.Services;
+using DartERP.Core.Interfaces;
 using DartERP.WinForms.Controls;
 using DartERP.WinForms.Local;
 using DartERP.WinForms.Styling;
@@ -317,6 +318,16 @@ public class MainForm : Form
             _serviceProvider.GetRequiredService<DispositionService>(),
             _serviceProvider.GetRequiredService<SerializedItemService>(),
             _serviceProvider.GetRequiredService<CustomerService>()),
+        ["Database"] = () => new DatabaseExplorerControl(
+            _serviceProvider.GetRequiredService<ICustomerRepository>(),
+            _serviceProvider.GetRequiredService<IVendorRepository>(),
+            _serviceProvider.GetRequiredService<IProductRepository>(),
+            _serviceProvider.GetRequiredService<IPurchaseOrderRepository>(),
+            _serviceProvider.GetRequiredService<IWorkOrderRepository>(),
+            _serviceProvider.GetRequiredService<ISerializedItemRepository>(),
+            _serviceProvider.GetRequiredService<IQualityInspectionRepository>(),
+            _serviceProvider.GetRequiredService<IDispositionRepository>(),
+            _serviceProvider.GetRequiredService<IUserRepository>()),
         ["Settings"] = () => new SettingsControl(),
     };
 

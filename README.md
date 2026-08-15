@@ -26,6 +26,7 @@ I work professionally with ERP implementations — SQL Server, REST APIs, third-
 - **Quality Control** — Pending/Passed/Failed inspections against serialized items
 - **A&D Log** — ATF-style Acquisition & Disposition tracking: a permanent record of where every serialized item went (Sold/Transferred/Destroyed/Returned) and to whom, with Sold/Transferred requiring a recipient. Recording a disposition also updates the item's inventory status, so Serialized Inventory and the A&D Log never disagree
 - **Authentication & User Accounts** — sign in/sign up on a branded login screen (looping video background via WebView2), PBKDF2-hashed passwords (salted, one-way — never stored in plain text), a profile menu (avatar, display name, role, phone, email, picture upload, change password), a lock screen that re-prompts for a password without ending the session, and a true log-out that returns to a fresh sign-in
+- **Database Explorer** — a generic, read-only browser over the actual database tables (nine of them, one click away in the sidebar), sortable by any column. Every other screen in the app hand-curates its columns and goes through the service layer; this one binds straight to each repository's raw `GetAllAsync()` and lets `DataGridView` build columns via reflection, because the point here is showing the real schema, not another polished business view of it
 
 Sales Orders and a REST API were scoped out to keep the core workflow polished within the available time — see [Future Improvements](#future-improvements).
 
@@ -80,6 +81,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for more detail and [docs/DATAB
 | ![Purchase Orders](screenshots/06_purchase_orders.png) | ![Work Orders](screenshots/07_work_orders.png) |
 | ![Serialized Inventory](screenshots/08_serialized_inventory.png) | ![Quality Control](screenshots/09_quality_control.png) |
 | ![Sign In](screenshots/10_login.png) | ![Settings](screenshots/11_settings.png) |
+| ![Database Explorer](screenshots/12_database.png) | |
 
 ## Database Design
 

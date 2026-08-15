@@ -9,7 +9,7 @@ Quick-reference talking points. Not meant to be read top to bottom — skim befo
 ## What DartERP is
 
 - Internal ERP for a fictional manufacturing company (firearms-industry flavor, zero engineering/technical data — products are pure business records: SKU, cost, price, quantity)
-- Demo flow: Sign In → Dashboard → Customers → Vendors → Products/Inventory → Purchase Orders → Work Orders → Serialized Inventory → Quality Control → A&D Log → Settings
+- Demo flow: Sign In → Dashboard → Customers → Vendors → Products/Inventory → Purchase Orders → Work Orders → Serialized Inventory → Quality Control → A&D Log → Database → Settings
 - The A&D Log models a real regulatory concept (the ATF bound book) purely as a compliance/business record — who received each serialized item and how it left inventory — no different in kind from any other audit trail an ERP tracks
 - Scoped deliberately: Sales Orders and a REST API were cut to keep the core loop polished, not left half-built; role-based *enforcement* was also cut — `Role` is a real column shown in the UI, but nothing gates a screen behind it yet
 
@@ -31,6 +31,12 @@ Quick-reference talking points. Not meant to be read top to bottom — skim befo
 - `PasswordHasher` lives in `DartERP.Core`, not `Application` — `Infrastructure`'s seeder needs it to hash the demo users' passwords at startup, and `Infrastructure` doesn't reference `Application`. `Core` is the only project both already depend on. Small example of a dependency-direction constraint driving where code has to live.
 - The login screen's video background runs through WebView2 (`Microsoft.Web.WebView2.WinForms`), navigating a small local HTML file rather than raw GDI+ video decoding — the standard, well-supported way to get smooth autoplay/loop video in a WinForms app. Falls back to a static branded panel if the WebView2 Runtime genuinely isn't present, so a missing runtime degrades gracefully instead of crashing the app before anyone can sign in.
 - `MainForm`/`LoginForm` are `Transient` in DI, not `Singleton` like everything else — logging out needs a fresh `MainForm` (new header identity) and a fresh `LoginForm` each time `Program.cs`'s sign-in loop comes back around. `CurrentUserContext` is the one `Singleton` addition, holding whoever's currently signed in for the process lifetime.
+
+## Database Explorer
+
+- The one screen that deliberately breaks the app's own conventions: every other grid hand-curates its columns and goes through `Application.Services`; this one binds straight to a repository's raw `GetAllAsync()` and lets `DataGridView.AutoGenerateColumns` build columns via reflection, because the whole point is showing the actual schema, not another curated business view of it
+- Navigation/collection properties (`Product.WorkOrders`, `PurchaseOrder.Vendor`, etc.) get hidden after binding by checking each auto-generated column's `ValueType` against a short list of scalar types — one generic rule, not per-entity column lists, so it stays "zero new code per table"
+- `List<T>` doesn't support click-to-sort out of the box the way a `BindingList<T>` or `DataView` would; sorting is done by hand off `ColumnHeaderMouseClick` — reflect on the clicked column's `DataPropertyName`, sort the current rows, rebuild a concretely-typed `List<T>` (via `MakeGenericType`) so `AutoGenerateColumns` doesn't just show every column as "object", and rebind
 
 ## .NET / EF Core
 
