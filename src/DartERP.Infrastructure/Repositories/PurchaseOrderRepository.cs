@@ -128,6 +128,46 @@ public class PurchaseOrderRepository : IPurchaseOrderRepository
         await context.SaveChangesAsync();
     }
 
+    public async Task<List<PurchaseOrderAttachment>> GetAttachmentsAsync(int purchaseOrderId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.PurchaseOrderAttachments
+            .Include(a => a.UploadedByUser)
+            .Where(a => a.PurchaseOrderId == purchaseOrderId)
+            .OrderByDescending(a => a.UploadedAt)
+            .ToListAsync();
+    }
+
+    public async Task<List<PurchaseOrderAttachment>> GetAllAttachmentsAsync()
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.PurchaseOrderAttachments.OrderByDescending(a => a.UploadedAt).ToListAsync();
+    }
+
+    public async Task<PurchaseOrderAttachment?> GetAttachmentByIdAsync(int attachmentId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.PurchaseOrderAttachments.FindAsync(attachmentId);
+    }
+
+    public async Task AddAttachmentAsync(PurchaseOrderAttachment attachment)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        context.PurchaseOrderAttachments.Add(attachment);
+        await context.SaveChangesAsync();
+    }
+
+    public async Task DeleteAttachmentAsync(int attachmentId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var attachment = await context.PurchaseOrderAttachments.FindAsync(attachmentId);
+        if (attachment is null)
+            return;
+
+        context.PurchaseOrderAttachments.Remove(attachment);
+        await context.SaveChangesAsync();
+    }
+
     public async Task UpdateWithLinesAsync(PurchaseOrder header, List<PurchaseOrderLine> lines)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();

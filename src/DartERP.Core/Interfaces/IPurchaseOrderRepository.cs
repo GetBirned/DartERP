@@ -15,6 +15,11 @@ public interface IPurchaseOrderRepository : IRepository<PurchaseOrder>
     Task<List<PurchaseOrderStatusHistory>> GetStatusHistoryAsync(int purchaseOrderId);
     Task<List<PurchaseOrderStatusHistory>> GetAllStatusHistoryAsync();
     Task AddStatusHistoryAsync(PurchaseOrderStatusHistory entry);
+    Task<List<PurchaseOrderAttachment>> GetAttachmentsAsync(int purchaseOrderId);
+    Task<List<PurchaseOrderAttachment>> GetAllAttachmentsAsync();
+    Task<PurchaseOrderAttachment?> GetAttachmentByIdAsync(int attachmentId);
+    Task AddAttachmentAsync(PurchaseOrderAttachment attachment);
+    Task DeleteAttachmentAsync(int attachmentId);
 
     /// <summary>
     /// Replaces the header fields and full line set for an existing purchase order.

@@ -69,6 +69,15 @@ erDiagram
         int ChangedByUserId FK
         datetime ChangedAt
     }
+    PURCHASE_ORDER_ATTACHMENT {
+        int PurchaseOrderAttachmentId PK
+        int PurchaseOrderId FK
+        string FileName
+        string StoredPath
+        long FileSizeBytes
+        int UploadedByUserId FK
+        datetime UploadedAt
+    }
     SERIALIZED_ITEM {
         int SerializedItemId PK
         string SerialNumber UK
@@ -115,6 +124,8 @@ erDiagram
     WORK_ORDER ||--o{ WORK_ORDER_STATUS_HISTORY : "status changes"
     USER ||--o{ PURCHASE_ORDER_STATUS_HISTORY : "changed by"
     USER ||--o{ WORK_ORDER_STATUS_HISTORY : "changed by"
+    PURCHASE_ORDER ||--o{ PURCHASE_ORDER_ATTACHMENT : "attachments"
+    USER ||--o{ PURCHASE_ORDER_ATTACHMENT : "uploaded by"
 ```
 
 `Customer`'s only foreign key relationship in the current schema is `Disposition` (a Sold/Transferred disposition's recipient) — Sales Orders, which would link a customer to an order, were cut from this build (see the README's Future Improvements). `User` is referenced by `PurchaseOrderStatusHistories`/`WorkOrderStatusHistories` as `ChangedByUserId` — the audit trail on status transitions, described below.
@@ -129,6 +140,7 @@ erDiagram
 | `PurchaseOrders` | Unique index on `PurchaseOrderNumber`. `Status` stored as its enum name. `VendorId` FK is `Restrict` on delete (vendors are soft-deleted, never hard-deleted, so this is a belt-and-suspenders guard). |
 | `PurchaseOrderLines` | FK to `PurchaseOrders` is `Cascade` — lines are owned entirely by their parent order. FK to `Products` is `Restrict`. |
 | `PurchaseOrderStatusHistories` | One row per status transition on a `PurchaseOrder` — `FromStatus` (nullable, `null` means "created") and `ToStatus`, both stored as their enum name, plus `ChangedByUserId` and `ChangedAt`. Written by `PurchaseOrderService`, never the repository directly (see below). FK to `PurchaseOrders` is `Cascade` — history has no independent existence. FK to `Users` is `Restrict`. |
+| `PurchaseOrderAttachments` | One row per file attached to a `PurchaseOrder` (invoices, packing slips). `FileName` is the original name shown in the UI; `StoredPath` is an absolute path under `%LocalAppData%\DartERP\PurchaseOrderAttachments\{purchaseOrderId}\`, GUID-named on disk so multiple attachments never collide. FK to `PurchaseOrders` is `Cascade`. FK to `Users` is `Restrict`. |
 | `WorkOrders` | Unique index on `WorkOrderNumber`. FK to `Products` is `Restrict`. |
 | `WorkOrderStatusHistories` | Same shape and same write path as `PurchaseOrderStatusHistories`, for `WorkOrder` status transitions. |
 | `SerializedItems` | Unique index on `SerialNumber`, enforced at both the database (unique index) and application layer (`ISerializedItemRepository.SerialNumberExistsAsync`, checked before insert). FKs to `Products` and `WorkOrders` are `Restrict`. |
@@ -145,6 +157,12 @@ erDiagram
 `PurchaseOrderStatusHistory`/`WorkOrderStatusHistory` are two dedicated tables rather than one polymorphic `EntityType`/`EntityId` audit table — this schema has consistently favored explicit, strongly-typed structure over generic abstraction (`IRepository<T>` is deliberately the one generic pattern in use; see `docs/INTERVIEW_NOTES.md`). A polymorphic `EntityId` also couldn't carry a real foreign key constraint, which would have been the first "fake" FK in this schema.
 
 What counts as a loggable event is a business-layer decision, not a persistence-layer one: `PurchaseOrderService`/`WorkOrderService` decide when to write a history row (an initial entry on create, another only when a save actually changes `Status`), while `IPurchaseOrderRepository.AddStatusHistoryAsync`/`IWorkOrderRepository.AddStatusHistoryAsync` just insert whatever entry they're handed. Both services take a `CurrentUserContext` dependency to attribute the change to whoever's signed in — the first `Application.Services` class to depend on it (previously only WinForms forms did), but it's already a singleton in the same DI container, so there's no lifetime mismatch.
+
+## File attachments
+
+`PurchaseOrderAttachments` follows the same "database stores a path, not the bytes" convention already used for `Users.ProfilePicturePath` (see that row above) — the actual files live under `%LocalAppData%\DartERP\PurchaseOrderAttachments\{purchaseOrderId}\`. Unlike a profile picture, which is one file keyed by `userId`, a purchase order can have several attachments, so each gets its own GUID-named copy rather than being keyed by a single owning id.
+
+The copy/delete file I/O itself lives in the WinForms layer (`Local/PurchaseOrderAttachmentStore.cs`), not in `Application.Services` — the same place profile-picture upload already lives (`ProfileForm.UploadPicture()` calls `ProfilePictureStore` directly; there's no `UserService` upload method). `PurchaseOrderService.AddAttachmentAsync` only persists metadata the form already resolved (filename, path, size, uploader); it never touches disk. That keeps the service testable against `FakePurchaseOrderRepository` with zero real file I/O, same as every other test in this suite.
 
 ## Database Explorer
 

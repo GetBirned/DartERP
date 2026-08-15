@@ -4,6 +4,7 @@ using DartERP.Core.DTOs;
 using DartERP.Core.Enums;
 using DartERP.Core.Models;
 using DartERP.WinForms.Controls;
+using DartERP.WinForms.Local;
 using DartERP.WinForms.Styling;
 
 namespace DartERP.WinForms.Forms;
@@ -29,6 +30,9 @@ public class PurchaseOrderEditForm : Form
     private readonly LetterSpacedLabel _totalLabel;
     private readonly Label _errorLabel;
     private readonly DashboardListCard _historyCard;
+    private readonly PurchaseOrderAttachmentsPanel _attachmentsCard;
+
+    private const long MaxAttachmentSizeBytes = 25 * 1024 * 1024;
 
     public PurchaseOrderEditForm(PurchaseOrderService service, List<Vendor> activeVendors, List<Product> activeProducts, PurchaseOrder? existing)
     {
@@ -43,8 +47,8 @@ public class PurchaseOrderEditForm : Form
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;
-        ClientSize = new Size(760, 620);
-        MinimumSize = new Size(760, 560);
+        ClientSize = new Size(760, 680);
+        MinimumSize = new Size(760, 620);
         BackColor = Theme.CardBackground;
 
         _statusBox.DataSource = Enum.GetValues<PurchaseOrderStatus>();
@@ -77,11 +81,16 @@ public class PurchaseOrderEditForm : Form
         var footer = BuildFooterPanel(out _totalLabel, out _errorLabel);
 
         _historyCard = new DashboardListCard("Status History", "No status changes recorded yet.", stacked: true);
-        var historyHost = new Panel { Dock = DockStyle.Right, Width = 276, Padding = new Padding(8, 0, 24, 8) };
-        historyHost.Controls.Add(_historyCard);
+        _attachmentsCard = new PurchaseOrderAttachmentsPanel();
+        _attachmentsCard.AddRequested += async () => await AddAttachmentAsync();
+        _attachmentsCard.RemoveRequested += async attachment => await RemoveAttachmentAsync(attachment);
+
+        var sidePanel = new Panel { Dock = DockStyle.Right, Width = 276, Padding = new Padding(8, 0, 24, 8) };
+        sidePanel.Controls.Add(_historyCard);
+        sidePanel.Controls.Add(_attachmentsCard);
 
         Controls.Add(gridHost);
-        Controls.Add(historyHost);
+        Controls.Add(sidePanel);
         Controls.Add(addLineBar);
         Controls.Add(linesLabel);
         Controls.Add(headerPanel);
@@ -96,12 +105,14 @@ public class PurchaseOrderEditForm : Form
             {
                 LoadExisting(existing);
                 await LoadHistoryAsync(existing.PurchaseOrderId);
+                await LoadAttachmentsAsync(existing.PurchaseOrderId);
             };
         }
         else
         {
             _statusBox.SelectedItem = PurchaseOrderStatus.Draft;
             _historyCard.SetRows(Array.Empty<DashboardListRow>());
+            _attachmentsCard.SetAttachments(Array.Empty<PurchaseOrderAttachment>());
         }
 
         RecalculateTotal();
@@ -316,6 +327,48 @@ public class PurchaseOrderEditForm : Form
                 $"{h.ChangedByUser?.DisplayName ?? "Unknown"} · {h.ChangedAt.ToLocalTime():MM/dd/yyyy h:mm tt}"))
             .ToList();
         _historyCard.SetRows(rows);
+    }
+
+    private async Task LoadAttachmentsAsync(int purchaseOrderId)
+    {
+        var attachments = await _service.GetAttachmentsAsync(purchaseOrderId);
+        _attachmentsCard.SetAttachments(attachments);
+    }
+
+    private async Task AddAttachmentAsync()
+    {
+        if (_existing is null)
+        {
+            _errorLabel.Text = "Save the purchase order before attaching files.";
+            return;
+        }
+
+        using var dialog = new OpenFileDialog { Filter = "All Files (*.*)|*.*", Title = "Attach File" };
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+            return;
+
+        var fileInfo = new FileInfo(dialog.FileName);
+        if (fileInfo.Length > MaxAttachmentSizeBytes)
+        {
+            _errorLabel.Text = "Attachments must be smaller than 25 MB.";
+            return;
+        }
+
+        _errorLabel.Text = string.Empty;
+        var storedPath = PurchaseOrderAttachmentStore.SaveFromFile(_existing.PurchaseOrderId, dialog.FileName);
+        await _service.AddAttachmentAsync(_existing.PurchaseOrderId, fileInfo.Name, storedPath, fileInfo.Length);
+        await LoadAttachmentsAsync(_existing.PurchaseOrderId);
+    }
+
+    private async Task RemoveAttachmentAsync(PurchaseOrderAttachment attachment)
+    {
+        var confirm = MessageBox.Show(this, $"Remove \"{attachment.FileName}\"?", "Remove Attachment", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+        if (confirm != DialogResult.Yes)
+            return;
+
+        await _service.RemoveAttachmentAsync(attachment.PurchaseOrderAttachmentId);
+        PurchaseOrderAttachmentStore.Delete(attachment.StoredPath);
+        await LoadAttachmentsAsync(attachment.PurchaseOrderId);
     }
 
     private void AddLine(int productId, int quantity, decimal unitCost)

@@ -21,6 +21,20 @@ public class PurchaseOrderService
 
     public Task<List<PurchaseOrderStatusHistory>> GetStatusHistoryAsync(int purchaseOrderId) => _repository.GetStatusHistoryAsync(purchaseOrderId);
 
+    public Task<List<PurchaseOrderAttachment>> GetAttachmentsAsync(int purchaseOrderId) => _repository.GetAttachmentsAsync(purchaseOrderId);
+
+    public Task AddAttachmentAsync(int purchaseOrderId, string fileName, string storedPath, long fileSizeBytes) =>
+        _repository.AddAttachmentAsync(new PurchaseOrderAttachment
+        {
+            PurchaseOrderId = purchaseOrderId,
+            FileName = fileName,
+            StoredPath = storedPath,
+            FileSizeBytes = fileSizeBytes,
+            UploadedByUserId = _currentUserContext.CurrentUser!.UserId,
+        });
+
+    public Task RemoveAttachmentAsync(int attachmentId) => _repository.DeleteAttachmentAsync(attachmentId);
+
     public Task<List<PurchaseOrder>> GetAllWithVendorAsync() => _repository.GetAllWithVendorAsync();
 
     public Task<PurchaseOrder?> GetWithLinesAsync(int id) => _repository.GetWithLinesAsync(id);

@@ -53,6 +53,7 @@ public class DatabaseExplorerControl : UserControl
             ["Products"] = async () => (IList)await productRepository.GetAllAsync(),
             ["PurchaseOrders"] = async () => (IList)await purchaseOrderRepository.GetAllAsync(),
             ["PurchaseOrderStatusHistories"] = async () => (IList)await purchaseOrderRepository.GetAllStatusHistoryAsync(),
+            ["PurchaseOrderAttachments"] = async () => (IList)await purchaseOrderRepository.GetAllAttachmentsAsync(),
             ["WorkOrders"] = async () => (IList)await workOrderRepository.GetAllAsync(),
             ["WorkOrderStatusHistories"] = async () => (IList)await workOrderRepository.GetAllStatusHistoryAsync(),
             ["SerializedItems"] = async () => (IList)await serializedItemRepository.GetAllAsync(),

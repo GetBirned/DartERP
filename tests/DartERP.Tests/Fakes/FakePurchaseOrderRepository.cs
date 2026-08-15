@@ -7,9 +7,11 @@ public class FakePurchaseOrderRepository : IPurchaseOrderRepository
 {
     private readonly List<PurchaseOrder> _orders = [];
     private readonly List<PurchaseOrderStatusHistory> _statusHistory = [];
+    private readonly List<PurchaseOrderAttachment> _attachments = [];
     private int _nextId = 1;
     private int _nextLineId = 1;
     private int _nextHistoryId = 1;
+    private int _nextAttachmentId = 1;
 
     public Task<PurchaseOrder?> GetByIdAsync(int id) => Task.FromResult(_orders.FirstOrDefault(o => o.PurchaseOrderId == id));
 
@@ -53,6 +55,28 @@ public class FakePurchaseOrderRepository : IPurchaseOrderRepository
     {
         entry.PurchaseOrderStatusHistoryId = _nextHistoryId++;
         _statusHistory.Add(entry);
+        return Task.CompletedTask;
+    }
+
+    public Task<List<PurchaseOrderAttachment>> GetAttachmentsAsync(int purchaseOrderId) =>
+        Task.FromResult(_attachments.Where(a => a.PurchaseOrderId == purchaseOrderId).OrderByDescending(a => a.UploadedAt).ToList());
+
+    public Task<List<PurchaseOrderAttachment>> GetAllAttachmentsAsync() =>
+        Task.FromResult(_attachments.OrderByDescending(a => a.UploadedAt).ToList());
+
+    public Task<PurchaseOrderAttachment?> GetAttachmentByIdAsync(int attachmentId) =>
+        Task.FromResult(_attachments.FirstOrDefault(a => a.PurchaseOrderAttachmentId == attachmentId));
+
+    public Task AddAttachmentAsync(PurchaseOrderAttachment attachment)
+    {
+        attachment.PurchaseOrderAttachmentId = _nextAttachmentId++;
+        _attachments.Add(attachment);
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAttachmentAsync(int attachmentId)
+    {
+        _attachments.RemoveAll(a => a.PurchaseOrderAttachmentId == attachmentId);
         return Task.CompletedTask;
     }
 

@@ -52,6 +52,12 @@ Quick-reference talking points. Not meant to be read top to bottom — skim befo
 - First `Application.Services` classes to take a `CurrentUserContext` dependency (previously only WinForms forms touched it) — zero DI risk since it's already a `Singleton` in the same container
 - UI reuses `DashboardListCard` rather than a new control, with a `stacked` display mode added so its two lines of text (a status transition, then who/when) both get full width instead of the dashboard's default side-by-side name/dollar-amount split, which was too cramped for the PO/Work Order dialogs' narrower side panel
 
+## Purchase Order attachments
+
+- File I/O (copy on add, delete on remove) lives in the WinForms layer (`Local/PurchaseOrderAttachmentStore.cs`), not in `Application.Services` — same place profile-picture upload already lives, and for the same reason: it keeps `PurchaseOrderService.AddAttachmentAsync`/`RemoveAttachmentAsync` pure metadata persistence, testable against `FakePurchaseOrderRepository` with zero real disk access, exactly like the rest of this test suite
+- `PurchaseOrderAttachmentsPanel` extends `DashboardCard` directly rather than `DashboardListCard` — the shared list-row control has no room for a per-row "Remove" action or an "+ Add" button, and bolting one on would've risked the dashboard's four other list cards. `DashboardCard` was already proven to support a fully custom `Body` by `PieChart`/`BarChart`, so this is the third thing to extend it that way, not a new pattern
+- Multiple attachments per PO meant the storage convention couldn't just copy `ProfilePictureStore` (one file, keyed by `userId`) — each file gets a GUID name under a per-PO subfolder instead
+
 ## .NET / EF Core
 
 - .NET 8, nullable reference types enabled solution-wide

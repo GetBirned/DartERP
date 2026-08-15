@@ -146,4 +146,36 @@ public class PurchaseOrderServiceTests
 
         Assert.Single(history);
     }
+
+    [Fact]
+    public async Task AddAttachmentAsync_AddsRecordWithCurrentUser()
+    {
+        var (service, vendors, orders) = CreateService();
+        var activeVendor = (await vendors.GetAllAsync()).First(v => v.IsActive);
+        var po = await service.CreateAsync(activeVendor.VendorId, null, string.Empty, PurchaseOrderStatus.Draft, []);
+
+        await service.AddAttachmentAsync(po.PurchaseOrderId, "invoice.pdf", @"C:\fake\path\invoice.pdf", 1024);
+        var attachments = await orders.GetAttachmentsAsync(po.PurchaseOrderId);
+
+        var attachment = Assert.Single(attachments);
+        Assert.Equal("invoice.pdf", attachment.FileName);
+        Assert.Equal(@"C:\fake\path\invoice.pdf", attachment.StoredPath);
+        Assert.Equal(1024, attachment.FileSizeBytes);
+        Assert.Equal(1, attachment.UploadedByUserId);
+    }
+
+    [Fact]
+    public async Task RemoveAttachmentAsync_RemovesRecord()
+    {
+        var (service, vendors, orders) = CreateService();
+        var activeVendor = (await vendors.GetAllAsync()).First(v => v.IsActive);
+        var po = await service.CreateAsync(activeVendor.VendorId, null, string.Empty, PurchaseOrderStatus.Draft, []);
+        await service.AddAttachmentAsync(po.PurchaseOrderId, "invoice.pdf", @"C:\fake\path\invoice.pdf", 1024);
+        var attachment = (await orders.GetAttachmentsAsync(po.PurchaseOrderId)).Single();
+
+        await service.RemoveAttachmentAsync(attachment.PurchaseOrderAttachmentId);
+        var attachments = await orders.GetAttachmentsAsync(po.PurchaseOrderId);
+
+        Assert.Empty(attachments);
+    }
 }
