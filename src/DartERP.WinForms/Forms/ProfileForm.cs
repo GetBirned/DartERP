@@ -12,7 +12,7 @@ public class ProfileForm : Form
     private readonly UserService _userService;
     private readonly CurrentUserContext _currentUserContext;
 
-    private readonly Avatar _avatar = new() { Width = 72, Height = 72 };
+    private readonly Avatar _avatar = new() { Width = 96, Height = 96, ShowEditOverlayOnHover = true };
     private readonly TextBox _usernameBox = new TextBox().StyleAsInput();
     private readonly TextBox _displayNameBox = new TextBox().StyleAsInput();
     private readonly TextBox _roleBox = new TextBox().StyleAsInput();
@@ -20,9 +20,9 @@ public class ProfileForm : Form
     private readonly TextBox _emailBox = new TextBox().StyleAsInput();
     private readonly Label _profileError;
 
-    private readonly TextBox _currentPasswordBox = new TextBox().StyleAsInput();
-    private readonly TextBox _newPasswordBox = new TextBox().StyleAsInput();
-    private readonly TextBox _confirmPasswordBox = new TextBox().StyleAsInput();
+    private readonly PasswordTextBox _currentPasswordBox = new();
+    private readonly PasswordTextBox _newPasswordBox = new();
+    private readonly PasswordTextBox _confirmPasswordBox = new();
     private readonly Label _passwordStatus;
 
     /// <summary>Raised after a successful profile save or picture change, so MainForm can refresh its header without a full shell rebuild.</summary>
@@ -51,14 +51,15 @@ public class ProfileForm : Form
         _emailBox.Text = user.Email;
         _avatar.SetUser(user.DisplayName, user.Username, ProfilePictureStore.Load(user.ProfilePicturePath));
 
-        var changePictureButton = new Button { Text = "Change Picture", Width = 140, Height = 30 }.StyleAsSecondaryButton();
-        changePictureButton.Click += (_, _) => UploadPicture();
+        // Clicking the avatar itself opens the file picker now — the hover
+        // overlay ("Edit", drawn by Avatar when ShowEditOverlayOnHover is
+        // on) replaces what used to be a separate "Change Picture" button
+        // sitting next to it.
+        _avatar.Click += (_, _) => UploadPicture();
 
-        var pictureRow = new Panel { Dock = DockStyle.Top, Height = 90, Padding = new Padding(24, 16, 24, 0) };
-        _avatar.Location = new Point(0, 0);
-        changePictureButton.Location = new Point(_avatar.Width + 16, (_avatar.Height - changePictureButton.Height) / 2);
+        var pictureRow = new Panel { Dock = DockStyle.Top, Height = 132 };
+        _avatar.Location = new Point((ClientSize.Width - _avatar.Width) / 2, 20);
         pictureRow.Controls.Add(_avatar);
-        pictureRow.Controls.Add(changePictureButton);
 
         var profileLayout = new TableLayoutPanel
         {
@@ -77,9 +78,10 @@ public class ProfileForm : Form
         FormLayoutHelper.AddRow(profileLayout, 4, "Email", _emailBox);
         _profileError = FormLayoutHelper.AddValidationLabel(profileLayout, 5);
 
-        var saveProfileButton = new Button { Text = "Save Profile", Width = 140, Height = 32 }.StyleAsPrimaryButton();
+        var saveProfileButton = new Button { Text = "Save Profile", Width = 160, Height = 32 }.StyleAsPrimaryButton();
         saveProfileButton.Click += async (_, _) => await SaveProfileAsync();
-        var saveProfileRow = new Panel { Dock = DockStyle.Top, Height = 48, Padding = new Padding(24, 4, 24, 0) };
+        saveProfileButton.Location = new Point((ClientSize.Width - saveProfileButton.Width) / 2, 4);
+        var saveProfileRow = new Panel { Dock = DockStyle.Top, Height = 48 };
         saveProfileRow.Controls.Add(saveProfileButton);
 
         var divider = new Panel { Dock = DockStyle.Top, Height = 1, BackColor = Theme.BorderColor, Margin = new Padding(0, 16, 0, 0) };
@@ -95,10 +97,6 @@ public class ProfileForm : Form
             Height = 30,
             Padding = new Padding(24, 4, 0, 0),
         };
-
-        _currentPasswordBox.UseSystemPasswordChar = true;
-        _newPasswordBox.UseSystemPasswordChar = true;
-        _confirmPasswordBox.UseSystemPasswordChar = true;
 
         var passwordLayout = new TableLayoutPanel
         {
@@ -117,7 +115,8 @@ public class ProfileForm : Form
 
         var updatePasswordButton = new Button { Text = "Update Password", Width = 160, Height = 32 }.StyleAsSecondaryButton();
         updatePasswordButton.Click += async (_, _) => await ChangePasswordAsync();
-        var updatePasswordRow = new Panel { Dock = DockStyle.Top, Height = 48, Padding = new Padding(24, 4, 24, 0) };
+        updatePasswordButton.Location = new Point((ClientSize.Width - updatePasswordButton.Width) / 2, 4);
+        var updatePasswordRow = new Panel { Dock = DockStyle.Top, Height = 48 };
         updatePasswordRow.Controls.Add(updatePasswordButton);
 
         // Added in reverse since each panel docks to Top.

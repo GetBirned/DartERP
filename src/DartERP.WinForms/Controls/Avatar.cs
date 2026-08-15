@@ -21,11 +21,30 @@ public class Avatar : Panel
     private Image? _picture;
     private string _initials = "?";
     private Color _fallbackColor = Palette[0];
+    private bool _isHovered;
+
+    /// <summary>
+    /// Off by default — the header avatar and the lock screen's avatar
+    /// aren't "edit" targets (one opens a menu, the other's just
+    /// decorative), so only ProfileForm turns this on.
+    /// </summary>
+    public bool ShowEditOverlayOnHover { get; set; }
 
     public Avatar()
     {
         DoubleBuffered = true;
         Cursor = Cursors.Hand;
+        MouseEnter += (_, _) => SetHovered(true);
+        MouseLeave += (_, _) => SetHovered(false);
+    }
+
+    private void SetHovered(bool hovered)
+    {
+        if (!ShowEditOverlayOnHover || _isHovered == hovered)
+            return;
+
+        _isHovered = hovered;
+        Invalidate();
     }
 
     public void SetUser(string displayName, string usernameForColor, Image? picture)
@@ -81,14 +100,25 @@ public class Avatar : Panel
             e.Graphics.SetClip(clipPath);
             e.Graphics.DrawImage(_picture, bounds);
             e.Graphics.Clip = oldClip;
-            return;
+        }
+        else
+        {
+            using var brush = new SolidBrush(_fallbackColor);
+            e.Graphics.FillEllipse(brush, bounds);
+
+            var textSize = e.Graphics.MeasureString(_initials, Theme.FontBodyBold);
+            var textLocation = new PointF((Width - textSize.Width) / 2, (Height - textSize.Height) / 2);
+            e.Graphics.DrawString(_initials, Theme.FontBodyBold, Brushes.White, textLocation);
         }
 
-        using var brush = new SolidBrush(_fallbackColor);
-        e.Graphics.FillEllipse(brush, bounds);
+        if (ShowEditOverlayOnHover && _isHovered)
+        {
+            using var overlayBrush = new SolidBrush(Color.FromArgb(150, 0, 0, 0));
+            e.Graphics.FillEllipse(overlayBrush, bounds);
 
-        var textSize = e.Graphics.MeasureString(_initials, Theme.FontBodyBold);
-        var textLocation = new PointF((Width - textSize.Width) / 2, (Height - textSize.Height) / 2);
-        e.Graphics.DrawString(_initials, Theme.FontBodyBold, Brushes.White, textLocation);
+            var editSize = e.Graphics.MeasureString("Edit", Theme.FontSmall);
+            var editLocation = new PointF((Width - editSize.Width) / 2, (Height - editSize.Height) / 2);
+            e.Graphics.DrawString("Edit", Theme.FontSmall, Brushes.White, editLocation);
+        }
     }
 }
