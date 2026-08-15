@@ -34,9 +34,20 @@ public class BarChart : DashboardCard
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
+        // Body.Padding only affects docked child controls, not manual
+        // drawing in a Paint handler — same gotcha as LetterSpacedLabel.
+        // Everything below is positioned relative to this inset rectangle
+        // instead of raw Body.Width/Height, so labels get the same 16px
+        // margin every other dashboard card has instead of sitting flush
+        // against the edge.
+        var bounds = new Rectangle(
+            Body.Padding.Left, Body.Padding.Top,
+            Math.Max(0, Body.Width - Body.Padding.Horizontal),
+            Math.Max(0, Body.Height - Body.Padding.Vertical));
+
         if (_bars.Count == 0 || _bars.All(b => b.Value == 0))
         {
-            TextRenderer.DrawText(g, "No data yet.", Theme.FontSmall, Body.ClientRectangle, Theme.TextSecondary,
+            TextRenderer.DrawText(g, "No data yet.", Theme.FontSmall, bounds, Theme.TextSecondary,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
             return;
         }
@@ -44,30 +55,31 @@ public class BarChart : DashboardCard
         const float labelWidth = 104f;
         const float valueWidth = 64f;
         var maxValue = _bars.Max(b => b.Value);
-        var rowHeight = (float)Body.Height / _bars.Count;
+        var rowHeight = (float)bounds.Height / _bars.Count;
         var barHeight = Math.Min(16f, rowHeight * 0.5f);
-        var barAreaWidth = Math.Max(0, Body.Width - labelWidth - valueWidth);
+        var barAreaWidth = Math.Max(0, bounds.Width - labelWidth - valueWidth);
+        var barAreaLeft = bounds.Left + labelWidth;
 
         for (var i = 0; i < _bars.Count; i++)
         {
             var bar = _bars[i];
-            var rowCenterY = rowHeight * i + rowHeight / 2f;
+            var rowCenterY = bounds.Top + rowHeight * i + rowHeight / 2f;
 
-            var labelRect = new Rectangle(0, (int)(rowCenterY - 8), (int)labelWidth, 16);
+            var labelRect = new Rectangle(bounds.Left, (int)(rowCenterY - 8), (int)labelWidth, 16);
             TextRenderer.DrawText(g, bar.Label, Theme.FontSmall, labelRect, Theme.TextSecondary,
                 TextFormatFlags.NoPrefix | TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
 
             using (var trackBrush = new SolidBrush(Theme.AppBackground))
-                g.FillRectangle(trackBrush, labelWidth, rowCenterY - barHeight / 2, barAreaWidth, barHeight);
+                g.FillRectangle(trackBrush, barAreaLeft, rowCenterY - barHeight / 2, barAreaWidth, barHeight);
 
             var barWidth = maxValue == 0 ? 0 : (float)(bar.Value / maxValue) * barAreaWidth;
             if (barWidth > 0)
             {
                 using var barBrush = new SolidBrush(Theme.AccentPrimary);
-                g.FillRectangle(barBrush, labelWidth, rowCenterY - barHeight / 2, barWidth, barHeight);
+                g.FillRectangle(barBrush, barAreaLeft, rowCenterY - barHeight / 2, barWidth, barHeight);
             }
 
-            var valueRect = new Rectangle((int)(labelWidth + barAreaWidth + 6), (int)(rowCenterY - 8), (int)valueWidth - 6, 16);
+            var valueRect = new Rectangle((int)(barAreaLeft + barAreaWidth + 6), (int)(rowCenterY - 8), (int)valueWidth - 6, 16);
             TextRenderer.DrawText(g, _valueFormatter(bar.Value), Theme.FontSmall, valueRect, Theme.TextPrimary,
                 TextFormatFlags.NoPrefix | TextFormatFlags.Right | TextFormatFlags.VerticalCenter);
         }

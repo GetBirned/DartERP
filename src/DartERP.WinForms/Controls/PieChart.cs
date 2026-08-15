@@ -32,16 +32,42 @@ public class PieChart : DashboardCard
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
+        // Body.Padding only affects docked child controls, not manual
+        // drawing in a Paint handler — same gotcha as LetterSpacedLabel.
+        // Everything below is positioned relative to this inset rectangle
+        // instead of raw Body.Width/Height, so the chart actually gets the
+        // same 16px margin every other dashboard card has.
+        var bounds = new Rectangle(
+            Body.Padding.Left, Body.Padding.Top,
+            Math.Max(0, Body.Width - Body.Padding.Horizontal),
+            Math.Max(0, Body.Height - Body.Padding.Vertical));
+
         if (_slices.Count == 0)
         {
-            TextRenderer.DrawText(g, "No data yet.", Theme.FontSmall, Body.ClientRectangle, Theme.TextSecondary,
+            TextRenderer.DrawText(g, "No data yet.", Theme.FontSmall, bounds, Theme.TextSecondary,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
             return;
         }
 
+        const float swatchSize = 10f;
+        const float legendGap = 18f;
+
+        // Measure the legend up front so the donut+legend pair can be
+        // centered as one block, instead of the donut sitting flush left
+        // with a lopsided gap of empty space wherever the (short) legend
+        // text happens to end.
+        var legendTextWidth = _slices
+            .Select(s => TextRenderer.MeasureText(g, $"{s.Label} ({s.Value:0})", Theme.FontSmall).Width)
+            .DefaultIfEmpty(0)
+            .Max();
+        var legendWidth = swatchSize + 6 + legendTextWidth;
+
+        var diameter = Math.Max(0, Math.Min(bounds.Height - 8, 110));
+        var contentWidth = diameter + legendGap + legendWidth;
+        var startX = bounds.Left + Math.Max(0, (bounds.Width - contentWidth) / 2f);
+
         var total = _slices.Sum(s => s.Value);
-        var diameter = Math.Max(0, Math.Min(Body.Height - 8, 110));
-        var donutRect = new RectangleF(0, (Body.Height - diameter) / 2f, diameter, diameter);
+        var donutRect = new RectangleF(startX, bounds.Top + (bounds.Height - diameter) / 2f, diameter, diameter);
 
         var startAngle = -90f;
         using (var separatorPen = new Pen(Theme.CardBackground, 2))
@@ -64,9 +90,8 @@ public class PieChart : DashboardCard
         using (var holeBrush = new SolidBrush(Theme.CardBackground))
             g.FillEllipse(holeBrush, holeRect);
 
-        var legendX = donutRect.Right + 18f;
-        var legendY = Math.Max(0f, (Body.Height - _slices.Count * 20) / 2f);
-        const float swatchSize = 10f;
+        var legendX = donutRect.Right + legendGap;
+        var legendY = Math.Max(bounds.Top, bounds.Top + (bounds.Height - _slices.Count * 20) / 2f);
 
         foreach (var slice in _slices)
         {
@@ -74,7 +99,7 @@ public class PieChart : DashboardCard
                 g.FillRectangle(swatchBrush, legendX, legendY + 3, swatchSize, swatchSize);
 
             var text = $"{slice.Label} ({slice.Value:0})";
-            var textRect = new Rectangle((int)(legendX + swatchSize + 6), (int)legendY, (int)(Body.Width - legendX - swatchSize - 6), 20);
+            var textRect = new Rectangle((int)(legendX + swatchSize + 6), (int)legendY, (int)legendTextWidth + 4, 20);
             TextRenderer.DrawText(g, text, Theme.FontSmall, textRect, Theme.TextPrimary,
                 TextFormatFlags.NoPrefix | TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
 
