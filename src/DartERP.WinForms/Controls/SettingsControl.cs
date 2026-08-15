@@ -25,7 +25,7 @@ public class SettingsControl : UserControl
         };
         card.ApplyRoundedRegion(10);
 
-        var heading = new Label
+        var heading = new LetterSpacedLabel
         {
             Text = "Appearance",
             Font = Theme.FontSubheader,

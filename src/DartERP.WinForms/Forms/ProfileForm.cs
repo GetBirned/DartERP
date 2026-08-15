@@ -86,7 +86,7 @@ public class ProfileForm : Form
         var dividerHost = new Panel { Dock = DockStyle.Top, Height = 24, Padding = new Padding(24, 12, 24, 0) };
         dividerHost.Controls.Add(divider);
 
-        var passwordHeading = new Label
+        var passwordHeading = new LetterSpacedLabel
         {
             Text = "Change Password",
             Font = Theme.FontSubheader,

@@ -52,7 +52,7 @@ public class LockForm : Form
         var avatarHost = new Panel { Width = 300, Height = 72 };
         avatarHost.Controls.Add(avatar);
 
-        var nameLabel = new Label
+        var nameLabel = new LetterSpacedLabel
         {
             Text = user.DisplayName,
             Font = Theme.FontSubheader,

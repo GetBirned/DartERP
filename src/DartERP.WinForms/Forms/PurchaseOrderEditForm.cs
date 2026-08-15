@@ -3,6 +3,7 @@ using DartERP.Application.Validation;
 using DartERP.Core.DTOs;
 using DartERP.Core.Enums;
 using DartERP.Core.Models;
+using DartERP.WinForms.Controls;
 using DartERP.WinForms.Styling;
 
 namespace DartERP.WinForms.Forms;
@@ -25,7 +26,7 @@ public class PurchaseOrderEditForm : Form
     private readonly ComboBox _statusBox = new ComboBox().StyleAsInput();
     private readonly TextBox _notesBox = new TextBox().StyleAsInput();
     private readonly DataGridView _linesGrid;
-    private readonly Label _totalLabel;
+    private readonly LetterSpacedLabel _totalLabel;
     private readonly Label _errorLabel;
 
     public PurchaseOrderEditForm(PurchaseOrderService service, List<Vendor> activeVendors, List<Product> activeProducts, PurchaseOrder? existing)
@@ -53,7 +54,7 @@ public class PurchaseOrderEditForm : Form
         _expectedDatePicker.Value = DateTime.Today.AddDays(14);
 
         var headerPanel = BuildHeaderPanel();
-        var linesLabel = new Label
+        var linesLabel = new LetterSpacedLabel
         {
             Text = "Line Items",
             Font = Theme.FontSubheader,
@@ -244,7 +245,7 @@ public class PurchaseOrderEditForm : Form
         return grid;
     }
 
-    private Panel BuildFooterPanel(out Label totalLabel, out Label errorLabel)
+    private Panel BuildFooterPanel(out LetterSpacedLabel totalLabel, out Label errorLabel)
     {
         var footer = new Panel { Dock = DockStyle.Bottom, Height = 76, Padding = new Padding(24, 8, 24, 16) };
 
@@ -254,7 +255,7 @@ public class PurchaseOrderEditForm : Form
         var cancelButton = new Button { Text = "Cancel", Width = 100, Dock = DockStyle.Right, Margin = new Padding(0, 0, 8, 0) }.StyleAsSecondaryButton();
         cancelButton.Click += (_, _) => { DialogResult = DialogResult.Cancel; Close(); };
 
-        totalLabel = new Label
+        totalLabel = new LetterSpacedLabel
         {
             Text = "Total: $0.00",
             Font = Theme.FontSubheader,

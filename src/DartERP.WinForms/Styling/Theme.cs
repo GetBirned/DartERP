@@ -168,7 +168,7 @@ public static class Theme
     public static Color NeutralGray => _current.NeutralGray;
 
     public static readonly Font FontHeader = new(AppFonts.InterFamily, 18F, FontStyle.Bold);
-    public static readonly Font FontSubheader = new(AppFonts.InterFamily, 12F, FontStyle.Bold);
+    public static readonly Font FontSubheader = new(AppFonts.InterFamily, 13F, FontStyle.Bold);
     public static readonly Font FontBody = new(AppFonts.InterFamily, 9.75F, FontStyle.Regular);
     public static readonly Font FontBodyBold = new(AppFonts.InterFamily, 9.75F, FontStyle.Bold);
     public static readonly Font FontSmall = new(AppFonts.InterFamily, 8.5F, FontStyle.Regular);

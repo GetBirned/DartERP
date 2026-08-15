@@ -7,7 +7,7 @@ namespace DartERP.WinForms.Controls;
 /// </summary>
 public class EmptyStateControl : Panel
 {
-    private readonly Label _titleLabel;
+    private readonly LetterSpacedLabel _titleLabel;
     private readonly Label _subtitleLabel;
 
     public EmptyStateControl(string title, string subtitle)
@@ -15,7 +15,7 @@ public class EmptyStateControl : Panel
         Dock = DockStyle.Fill;
         BackColor = Theme.CardBackground;
 
-        _titleLabel = new Label
+        _titleLabel = new LetterSpacedLabel
         {
             Text = title,
             Font = Theme.FontSubheader,

@@ -25,7 +25,7 @@ public class MainForm : Form
     private Panel? _sidebar;
     private Panel? _rightSide;
     private Panel _contentPanel = null!;
-    private Label _pageTitleLabel = null!;
+    private LetterSpacedLabel _pageTitleLabel = null!;
     private Avatar _headerAvatar = null!;
     private Label _headerNameLabel = null!;
     private Control? _activeModule;
@@ -105,10 +105,9 @@ public class MainForm : Form
             BackColor = Theme.CardBackground,
         };
 
-        _pageTitleLabel = new Label
+        _pageTitleLabel = new LetterSpacedLabel
         {
             Text = _currentModuleName,
-            UseMnemonic = false, // module names like "A&D Log" shouldn't treat & as an accelerator prefix
             Font = Theme.FontSubheader,
             ForeColor = Theme.TextPrimary,
             AutoSize = false,

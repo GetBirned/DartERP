@@ -26,7 +26,7 @@ public class InventoryControl : UserControl
             WrapContents = false,
         };
 
-        var sectionLabel = new Label
+        var sectionLabel = new LetterSpacedLabel
         {
             Text = "Inventory by Product",
             Font = Theme.FontSubheader,
