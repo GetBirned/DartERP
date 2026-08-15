@@ -1,6 +1,7 @@
 using DartERP.Application.Services;
 using DartERP.Core.Models;
 using DartERP.WinForms.Forms;
+using DartERP.WinForms.Local;
 using DartERP.WinForms.Styling;
 
 namespace DartERP.WinForms.Controls;
@@ -30,7 +31,11 @@ public class SerializedItemListControl : UserControl
         _searchBox = new TextBox { Dock = DockStyle.Fill, PlaceholderText = "Search by serial number..." }.StyleAsInput();
         _searchBox.TextChanged += (_, _) => ApplyFilter();
 
+        var exportButton = new Button { Text = "Export CSV", Width = 110, Dock = DockStyle.Right }.StyleAsSecondaryButton();
+        exportButton.Click += (_, _) => CsvExporter.ExportGrid(_grid, "SerializedInventory.csv");
+
         toolbar.Controls.Add(_searchBox);
+        toolbar.Controls.Add(exportButton);
         toolbar.Controls.Add(newButton);
 
         _grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = false };

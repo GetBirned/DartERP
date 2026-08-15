@@ -1,5 +1,6 @@
 using System.Collections;
 using DartERP.Core.Interfaces;
+using DartERP.WinForms.Local;
 using DartERP.WinForms.Styling;
 
 namespace DartERP.WinForms.Controls;
@@ -100,14 +101,21 @@ public class DatabaseExplorerControl : UserControl
             Text = string.Empty,
             Font = Theme.FontSmall,
             ForeColor = Theme.TextSecondary,
-            Dock = DockStyle.Top,
-            Height = 24,
-            Padding = new Padding(4, 4, 0, 0),
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Padding = new Padding(4, 0, 0, 0),
         };
+
+        var exportButton = new Button { Text = "Export CSV", Width = 110, Dock = DockStyle.Right }.StyleAsSecondaryButton();
+        exportButton.Click += (_, _) => CsvExporter.ExportGrid(_grid, $"{_tableList.SelectedItem}.csv");
+
+        var rowCountBar = new Panel { Dock = DockStyle.Top, Height = 36 };
+        rowCountBar.Controls.Add(_rowCountLabel);
+        rowCountBar.Controls.Add(exportButton);
 
         var gridPanel = new Panel { Dock = DockStyle.Fill, BackColor = Theme.CardBackground };
         gridPanel.Controls.Add(_grid);
-        gridPanel.Controls.Add(_rowCountLabel);
+        gridPanel.Controls.Add(rowCountBar);
 
         var separator = new Panel { Dock = DockStyle.Left, Width = 1, BackColor = Theme.BorderColor };
 

@@ -1,5 +1,6 @@
 using DartERP.Application.Services;
 using DartERP.Core.Models;
+using DartERP.WinForms.Local;
 using DartERP.WinForms.Styling;
 
 namespace DartERP.WinForms.Controls;
@@ -31,10 +32,16 @@ public class InventoryControl : UserControl
             Text = "Inventory by Product",
             Font = Theme.FontSubheader,
             ForeColor = Theme.TextPrimary,
-            Dock = DockStyle.Top,
-            Height = 32,
+            Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleLeft,
         };
+
+        var exportButton = new Button { Text = "Export CSV", Width = 110, Dock = DockStyle.Right }.StyleAsSecondaryButton();
+        exportButton.Click += (_, _) => CsvExporter.ExportGrid(_grid, "Inventory.csv");
+
+        var titleBar = new Panel { Dock = DockStyle.Top, Height = 40 };
+        titleBar.Controls.Add(sectionLabel);
+        titleBar.Controls.Add(exportButton);
 
         _grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = false };
         _grid.StyleAsDataGrid();
@@ -44,7 +51,7 @@ public class InventoryControl : UserControl
         _gridHost.Controls.Add(_grid);
 
         Controls.Add(_gridHost);
-        Controls.Add(sectionLabel);
+        Controls.Add(titleBar);
         Controls.Add(new Panel { Dock = DockStyle.Top, Height = 16 });
         Controls.Add(_kpiPanel);
 

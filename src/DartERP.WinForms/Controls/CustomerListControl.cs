@@ -1,6 +1,7 @@
 using DartERP.Application.Services;
 using DartERP.Core.Models;
 using DartERP.WinForms.Forms;
+using DartERP.WinForms.Local;
 using DartERP.WinForms.Styling;
 
 namespace DartERP.WinForms.Controls;
@@ -40,8 +41,12 @@ public class CustomerListControl : UserControl
         _searchBox = new TextBox { Dock = DockStyle.Fill, PlaceholderText = "Search by company, contact, or customer #..." }.StyleAsInput();
         _searchBox.TextChanged += async (_, _) => await RefreshAsync();
 
+        var exportButton = new Button { Text = "Export CSV", Width = 110, Dock = DockStyle.Right }.StyleAsSecondaryButton();
+        exportButton.Click += (_, _) => CsvExporter.ExportGrid(_grid, "Customers.csv");
+
         toolbar.Controls.Add(_searchBox);
         toolbar.Controls.Add(_activeOnlyCheck);
+        toolbar.Controls.Add(exportButton);
         toolbar.Controls.Add(newButton);
 
         _grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = false };
