@@ -32,8 +32,28 @@ public class Avatar : Panel
     {
         _picture = picture;
         _initials = GetInitials(displayName);
-        _fallbackColor = Palette[Math.Abs(usernameForColor.GetHashCode()) % Palette.Length];
+        _fallbackColor = Palette[StableHash(usernameForColor) % Palette.Length];
         Invalidate();
+    }
+
+    /// <summary>
+    /// NOTE: string.GetHashCode() is randomized per process on .NET Core+
+    /// (a security hardening measure, not a bug) — using it here meant the
+    /// same username picked a different avatar color every time the app
+    /// restarted, defeating the whole point of deriving a color from the
+    /// name instead of storing one. This is a simple FNV-1a hash instead,
+    /// which is stable across runs since it's just arithmetic over the
+    /// string's own characters, nothing process-specific.
+    /// </summary>
+    private static int StableHash(string value)
+    {
+        unchecked
+        {
+            var hash = 2166136261;
+            foreach (var c in value)
+                hash = (hash ^ c) * 16777619;
+            return (int)(hash & 0x7FFFFFFF);
+        }
     }
 
     private static string GetInitials(string displayName)
