@@ -1,3 +1,4 @@
+using DartERP.Core.Enums;
 using DartERP.Core.Interfaces;
 using DartERP.Core.Models;
 using DartERP.Infrastructure.Data;
@@ -85,5 +86,14 @@ public class ProductRepository : IProductRepository
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         return await context.Products.SumAsync(p => p.UnitCost * p.QuantityOnHand);
+    }
+
+    public async Task<Dictionary<ProductCategory, decimal>> GetInventoryValueByCategoryAsync()
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Products
+            .GroupBy(p => p.Category)
+            .Select(g => new { Category = g.Key, Value = g.Sum(p => p.UnitCost * p.QuantityOnHand) })
+            .ToDictionaryAsync(x => x.Category, x => x.Value);
     }
 }

@@ -1,3 +1,4 @@
+using DartERP.Core.Enums;
 using DartERP.Core.Models;
 
 namespace DartERP.Core.Interfaces;
@@ -10,6 +11,7 @@ public interface IPurchaseOrderRepository : IRepository<PurchaseOrder>
     Task<bool> PurchaseOrderNumberExistsAsync(string purchaseOrderNumber);
     Task<string> GetNextPurchaseOrderNumberAsync();
     Task<int> GetOpenCountAsync();
+    Task<Dictionary<PurchaseOrderStatus, int>> GetCountsByStatusAsync();
 
     /// <summary>
     /// Replaces the header fields and full line set for an existing purchase order.

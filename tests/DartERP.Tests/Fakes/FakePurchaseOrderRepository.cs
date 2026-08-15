@@ -38,6 +38,9 @@ public class FakePurchaseOrderRepository : IPurchaseOrderRepository
     public Task<int> GetOpenCountAsync() =>
         Task.FromResult(_orders.Count(o => o.Status != Core.Enums.PurchaseOrderStatus.Received && o.Status != Core.Enums.PurchaseOrderStatus.Cancelled));
 
+    public Task<Dictionary<Core.Enums.PurchaseOrderStatus, int>> GetCountsByStatusAsync() =>
+        Task.FromResult(_orders.GroupBy(o => o.Status).ToDictionary(g => g.Key, g => g.Count()));
+
     public Task UpdateWithLinesAsync(PurchaseOrder header, List<PurchaseOrderLine> lines)
     {
         var existing = _orders.First(o => o.PurchaseOrderId == header.PurchaseOrderId);

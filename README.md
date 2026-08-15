@@ -16,7 +16,7 @@ I work professionally with ERP implementations — SQL Server, REST APIs, third-
 
 ## Features
 
-- **Dashboard** — live KPIs (active customers/vendors, open purchase/work orders, inventory value, units in production) plus attention-needed panels (recent POs, low-stock products, work orders due soon, pending QC inspections)
+- **Dashboard** — live KPIs (active customers/vendors, open purchase/work orders, inventory value, units in production), attention-needed panels (recent POs, low-stock products, work orders due soon, pending QC inspections), and two hand-drawn charts (Purchase Orders by Status as a donut, Inventory Value by Category as a bar chart) — no charting library, plain GDI+
 - **Customers** — search, create, edit, soft-deactivate
 - **Vendors** — search, create, edit, soft-deactivate, vendor type; inactive vendors are excluded from new purchase orders
 - **Products & Inventory** — SKU/category/pricing management with unique-SKU enforcement, plus a separate Inventory view (value, low-stock highlighting, serialized vs. non-serialized mix)

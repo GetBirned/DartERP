@@ -1,3 +1,4 @@
+using DartERP.Core.Enums;
 using DartERP.Core.Models;
 
 namespace DartERP.Core.Interfaces;
@@ -9,4 +10,5 @@ public interface IProductRepository : IRepository<Product>
     Task<List<Product>> GetBelowReorderLevelAsync();
     Task<bool> SkuExistsAsync(string sku, int? excludeId = null);
     Task<decimal> GetTotalInventoryValueAsync();
+    Task<Dictionary<ProductCategory, decimal>> GetInventoryValueByCategoryAsync();
 }

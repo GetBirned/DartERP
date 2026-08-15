@@ -42,4 +42,7 @@ public class FakeProductRepository : IProductRepository
 
     public Task<decimal> GetTotalInventoryValueAsync() =>
         Task.FromResult(_products.Sum(p => p.UnitCost * p.QuantityOnHand));
+
+    public Task<Dictionary<Core.Enums.ProductCategory, decimal>> GetInventoryValueByCategoryAsync() =>
+        Task.FromResult(_products.GroupBy(p => p.Category).ToDictionary(g => g.Key, g => g.Sum(p => p.UnitCost * p.QuantityOnHand)));
 }

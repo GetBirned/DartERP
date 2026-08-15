@@ -8,51 +8,22 @@ public record DashboardListRow(string Primary, string Secondary, Color? AccentCo
 /// Compact "attention needed" card for the dashboard: a title and a short
 /// stacked list of rows (e.g. recent POs, low-stock products).
 /// </summary>
-public class DashboardListCard : Panel
+public class DashboardListCard : DashboardCard
 {
-    private readonly Panel _rowsPanel;
     private readonly string _emptyMessage;
 
-    public DashboardListCard(string title, string emptyMessage)
+    public DashboardListCard(string title, string emptyMessage) : base(title)
     {
         _emptyMessage = emptyMessage;
-        Dock = DockStyle.Fill;
-        BackColor = Theme.CardBackground;
-        Margin = new Padding(0, 0, 16, 16);
-        this.ApplyRoundedRegion(10);
-
-        var titleLabel = new Label
-        {
-            Text = title,
-            Font = Theme.FontBodyBold,
-            ForeColor = Theme.TextPrimary,
-            Dock = DockStyle.Top,
-            Height = 40,
-            Padding = new Padding(16, 12, 0, 0),
-        };
-
-        _rowsPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16, 0, 16, 12) };
-
-        Controls.Add(_rowsPanel);
-        Controls.Add(titleLabel);
-    }
-
-    protected override void OnPaint(PaintEventArgs e)
-    {
-        base.OnPaint(e);
-        e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-        using var pen = new Pen(Theme.BorderColor);
-        using var path = RoundedCorners.CreatePath(ClientRectangle, 10);
-        e.Graphics.DrawPath(pen, path);
     }
 
     public void SetRows(IReadOnlyList<DashboardListRow> rows)
     {
-        _rowsPanel.Controls.Clear();
+        Body.Controls.Clear();
 
         if (rows.Count == 0)
         {
-            _rowsPanel.Controls.Add(new Label
+            Body.Controls.Add(new Label
             {
                 Text = _emptyMessage,
                 Font = Theme.FontSmall,
@@ -92,7 +63,7 @@ public class DashboardListCard : Panel
 
             rowPanel.Controls.Add(secondaryLabel);
             rowPanel.Controls.Add(primaryLabel);
-            _rowsPanel.Controls.Add(rowPanel);
+            Body.Controls.Add(rowPanel);
         }
     }
 }

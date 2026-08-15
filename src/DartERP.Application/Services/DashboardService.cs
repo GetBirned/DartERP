@@ -1,3 +1,4 @@
+using DartERP.Core.Enums;
 using DartERP.Core.Interfaces;
 using DartERP.Core.Models;
 
@@ -13,7 +14,9 @@ public record DashboardSummary(
     List<PurchaseOrder> RecentPurchaseOrders,
     List<Product> ProductsBelowReorder,
     List<WorkOrder> WorkOrdersDueSoon,
-    List<QualityInspection> PendingInspections);
+    List<QualityInspection> PendingInspections,
+    Dictionary<PurchaseOrderStatus, int> PurchaseOrdersByStatus,
+    Dictionary<ProductCategory, decimal> InventoryValueByCategory);
 
 /// <summary>
 /// Aggregates KPI and attention-needed data for the dashboard. Every
@@ -57,11 +60,13 @@ public class DashboardService
         var belowReorderTask = _productRepository.GetBelowReorderLevelAsync();
         var dueSoonTask = _workOrderRepository.GetDueSoonAsync(7);
         var pendingInspectionsTask = _qualityInspectionRepository.GetPendingAsync();
+        var purchaseOrdersByStatusTask = _purchaseOrderRepository.GetCountsByStatusAsync();
+        var inventoryValueByCategoryTask = _productRepository.GetInventoryValueByCategoryAsync();
 
         await Task.WhenAll(
             activeCustomersTask, activeVendorsTask, openPurchaseOrdersTask, openWorkOrdersTask,
             inventoryValueTask, unitsInProductionTask, recentPurchaseOrdersTask, belowReorderTask,
-            dueSoonTask, pendingInspectionsTask);
+            dueSoonTask, pendingInspectionsTask, purchaseOrdersByStatusTask, inventoryValueByCategoryTask);
 
         return new DashboardSummary(
             activeCustomersTask.Result,
@@ -73,6 +78,8 @@ public class DashboardService
             recentPurchaseOrdersTask.Result,
             belowReorderTask.Result,
             dueSoonTask.Result,
-            pendingInspectionsTask.Result);
+            pendingInspectionsTask.Result,
+            purchaseOrdersByStatusTask.Result,
+            inventoryValueByCategoryTask.Result);
     }
 }

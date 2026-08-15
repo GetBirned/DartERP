@@ -63,4 +63,4 @@ The purchase order line grid (`PurchaseOrderEditForm`) is an unbound `DataGridVi
 
 ## Dashboard aggregation
 
-`DashboardService.GetSummaryAsync` fires ten repository calls via `Task.WhenAll` rather than sequential `await`s. This is safe specifically because every repository call opens its own `DbContext` through the factory — there's no shared connection or tracked-entity state that concurrent calls could corrupt.
+`DashboardService.GetSummaryAsync` fires twelve repository calls via `Task.WhenAll` rather than sequential `await`s — including the two `GroupBy` aggregations backing the dashboard's charts (purchase orders by status, inventory value by category). This is safe specifically because every repository call opens its own `DbContext` through the factory — there's no shared connection or tracked-entity state that concurrent calls could corrupt.

@@ -9,7 +9,7 @@ Quick-reference talking points. Not meant to be read top to bottom — skim befo
 ## What DartERP is
 
 - Internal ERP for a fictional manufacturing company (firearms-industry flavor, zero engineering/technical data — products are pure business records: SKU, cost, price, quantity)
-- Demo flow: Sign In → Dashboard → Customers → Vendors → Products/Inventory → Purchase Orders → Work Orders → Serialized Inventory → Quality Control → A&D Log → Database → Settings
+- Demo flow: Sign In → Dashboard (KPIs, attention-needed lists, two charts) → Customers → Vendors → Products/Inventory → Purchase Orders → Work Orders → Serialized Inventory → Quality Control → A&D Log → Database → Settings
 - The A&D Log models a real regulatory concept (the ATF bound book) purely as a compliance/business record — who received each serialized item and how it left inventory — no different in kind from any other audit trail an ERP tracks
 - Scoped deliberately: Sales Orders and a REST API were cut to keep the core loop polished, not left half-built; role-based *enforcement* was also cut — `Role` is a real column shown in the UI, but nothing gates a screen behind it yet
 
@@ -31,6 +31,13 @@ Quick-reference talking points. Not meant to be read top to bottom — skim befo
 - `PasswordHasher` lives in `DartERP.Core`, not `Application` — `Infrastructure`'s seeder needs it to hash the demo users' passwords at startup, and `Infrastructure` doesn't reference `Application`. `Core` is the only project both already depend on. Small example of a dependency-direction constraint driving where code has to live.
 - The login screen's video background runs through WebView2 (`Microsoft.Web.WebView2.WinForms`), navigating a small local HTML file rather than raw GDI+ video decoding — the standard, well-supported way to get smooth autoplay/loop video in a WinForms app. Falls back to a static branded panel if the WebView2 Runtime genuinely isn't present, so a missing runtime degrades gracefully instead of crashing the app before anyone can sign in.
 - `MainForm`/`LoginForm` are `Transient` in DI, not `Singleton` like everything else — logging out needs a fresh `MainForm` (new header identity) and a fresh `LoginForm` each time `Program.cs`'s sign-in loop comes back around. `CurrentUserContext` is the one `Singleton` addition, holding whoever's currently signed in for the process lifetime.
+
+## Charts
+
+- Two hand-drawn GDI+ charts on the Dashboard (`Controls/PieChart.cs`, `Controls/BarChart.cs`) rather than a charting library — the built-in `DataVisualization.Charting` looks dated, and something like LiveCharts2 means fighting a third-party theming API to hit the exact `#D4C6A6` brand tan. Two chart types was a small, contained amount of custom drawing given `StatusBadge`/`KpiCard` already do GDI+ card/pill rendering, and it gets pixel-exact color control for free.
+- `PieChart` reuses `StatusColors.For(PurchaseOrderStatus)` — the same status→color mapping every grid's status column already uses — so the donut's colors mean the same thing everywhere else in the app, not a chart-only palette invented on the spot.
+- Both charts and `DashboardListCard` share one `DashboardCard` base class (title bar + rounded card chrome) — extracted once three controls wanted the literal same `OnPaint` override, not planned in ahead of time.
+- New aggregation queries backing the charts (`IPurchaseOrderRepository.GetCountsByStatusAsync`, `IProductRepository.GetInventoryValueByCategoryAsync`) are plain EF Core `GroupBy` + `ToDictionaryAsync`, following the same "repository owns the query, service just calls it" split as everything else in `DashboardService`.
 
 ## Database Explorer
 

@@ -96,6 +96,15 @@ public class PurchaseOrderRepository : IPurchaseOrderRepository
             po.Status != PurchaseOrderStatus.Received && po.Status != PurchaseOrderStatus.Cancelled);
     }
 
+    public async Task<Dictionary<PurchaseOrderStatus, int>> GetCountsByStatusAsync()
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.PurchaseOrders
+            .GroupBy(po => po.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Status, x => x.Count);
+    }
+
     public async Task UpdateWithLinesAsync(PurchaseOrder header, List<PurchaseOrderLine> lines)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
