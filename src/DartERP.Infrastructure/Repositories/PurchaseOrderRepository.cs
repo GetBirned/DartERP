@@ -105,6 +105,29 @@ public class PurchaseOrderRepository : IPurchaseOrderRepository
             .ToDictionaryAsync(x => x.Status, x => x.Count);
     }
 
+    public async Task<List<PurchaseOrderStatusHistory>> GetStatusHistoryAsync(int purchaseOrderId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.PurchaseOrderStatusHistories
+            .Include(h => h.ChangedByUser)
+            .Where(h => h.PurchaseOrderId == purchaseOrderId)
+            .OrderByDescending(h => h.ChangedAt)
+            .ToListAsync();
+    }
+
+    public async Task<List<PurchaseOrderStatusHistory>> GetAllStatusHistoryAsync()
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.PurchaseOrderStatusHistories.OrderByDescending(h => h.ChangedAt).ToListAsync();
+    }
+
+    public async Task AddStatusHistoryAsync(PurchaseOrderStatusHistory entry)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        context.PurchaseOrderStatusHistories.Add(entry);
+        await context.SaveChangesAsync();
+    }
+
     public async Task UpdateWithLinesAsync(PurchaseOrder header, List<PurchaseOrderLine> lines)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();

@@ -14,7 +14,9 @@ public class DartErpDbContext : DbContext
     public DbSet<Product> Products => Set<Product>();
     public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
     public DbSet<PurchaseOrderLine> PurchaseOrderLines => Set<PurchaseOrderLine>();
+    public DbSet<PurchaseOrderStatusHistory> PurchaseOrderStatusHistories => Set<PurchaseOrderStatusHistory>();
     public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
+    public DbSet<WorkOrderStatusHistory> WorkOrderStatusHistories => Set<WorkOrderStatusHistory>();
     public DbSet<SerializedItem> SerializedItems => Set<SerializedItem>();
     public DbSet<QualityInspection> QualityInspections => Set<QualityInspection>();
     public DbSet<Disposition> Dispositions => Set<Disposition>();

@@ -1,3 +1,4 @@
+using DartERP.Application;
 using DartERP.Application.Services;
 using DartERP.Application.Validation;
 using DartERP.Core.Enums;
@@ -9,20 +10,22 @@ namespace DartERP.Tests;
 
 public class WorkOrderServiceTests
 {
-    private static (WorkOrderService Service, FakeProductRepository Products) CreateService()
+    private static (WorkOrderService Service, FakeProductRepository Products, FakeWorkOrderRepository WorkOrders) CreateService()
     {
         var products = new FakeProductRepository(
         [
             new Product { SKU = "DERP-1001", ProductName = "Model Alpha", IsActive = true, IsSerialized = true },
         ]);
         var workOrders = new FakeWorkOrderRepository();
-        return (new WorkOrderService(workOrders, products), products);
+        var currentUser = new CurrentUserContext();
+        currentUser.SignIn(new User { UserId = 1, DisplayName = "Alex Reyes" });
+        return (new WorkOrderService(workOrders, products, currentUser), products, workOrders);
     }
 
     [Fact]
     public async Task CreateAsync_WithDueDateBeforeStartDate_ThrowsValidationException()
     {
-        var (service, products) = CreateService();
+        var (service, products, _) = CreateService();
         var product = (await products.GetAllAsync()).First();
 
         await Assert.ThrowsAsync<ValidationException>(() =>
@@ -32,7 +35,7 @@ public class WorkOrderServiceTests
     [Fact]
     public async Task CreateAsync_WithZeroQuantity_ThrowsValidationException()
     {
-        var (service, products) = CreateService();
+        var (service, products, _) = CreateService();
         var product = (await products.GetAllAsync()).First();
 
         await Assert.ThrowsAsync<ValidationException>(() =>
@@ -42,7 +45,7 @@ public class WorkOrderServiceTests
     [Fact]
     public async Task UpdateAsync_OnCompletedWorkOrder_ThrowsValidationException()
     {
-        var (service, products) = CreateService();
+        var (service, products, _) = CreateService();
         var product = (await products.GetAllAsync()).First();
         var completedOrder = new WorkOrder
         {
@@ -64,5 +67,48 @@ public class WorkOrderServiceTests
     public void IsLocked_ReflectsTerminalStatuses(WorkOrderStatus status, bool expectedLocked)
     {
         Assert.Equal(expectedLocked, WorkOrderService.IsLocked(status));
+    }
+
+    [Fact]
+    public async Task CreateAsync_LogsInitialStatusHistoryEntry()
+    {
+        var (service, products, workOrders) = CreateService();
+        var product = (await products.GetAllAsync()).First();
+
+        var wo = await service.CreateAsync(product.ProductId, 10, DateTime.Today, DateTime.Today.AddDays(7), string.Empty, WorkOrderStatus.Planned);
+        var history = await workOrders.GetStatusHistoryAsync(wo.WorkOrderId);
+
+        var entry = Assert.Single(history);
+        Assert.Null(entry.FromStatus);
+        Assert.Equal(WorkOrderStatus.Planned, entry.ToStatus);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithStatusChange_LogsHistoryEntry()
+    {
+        var (service, products, workOrders) = CreateService();
+        var product = (await products.GetAllAsync()).First();
+        var wo = await service.CreateAsync(product.ProductId, 10, DateTime.Today, DateTime.Today.AddDays(7), string.Empty, WorkOrderStatus.Planned);
+
+        await service.UpdateAsync(wo, product.ProductId, 10, DateTime.Today, DateTime.Today.AddDays(7), string.Empty, WorkOrderStatus.Released);
+        var history = await workOrders.GetStatusHistoryAsync(wo.WorkOrderId);
+
+        Assert.Equal(2, history.Count);
+        var latest = history.First(h => h.FromStatus is not null);
+        Assert.Equal(WorkOrderStatus.Planned, latest.FromStatus);
+        Assert.Equal(WorkOrderStatus.Released, latest.ToStatus);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithoutStatusChange_DoesNotLogEntry()
+    {
+        var (service, products, workOrders) = CreateService();
+        var product = (await products.GetAllAsync()).First();
+        var wo = await service.CreateAsync(product.ProductId, 10, DateTime.Today, DateTime.Today.AddDays(7), string.Empty, WorkOrderStatus.Planned);
+
+        await service.UpdateAsync(wo, product.ProductId, 12, DateTime.Today, DateTime.Today.AddDays(7), string.Empty, WorkOrderStatus.Planned);
+        var history = await workOrders.GetStatusHistoryAsync(wo.WorkOrderId);
+
+        Assert.Single(history);
     }
 }

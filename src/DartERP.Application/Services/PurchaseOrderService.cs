@@ -10,12 +10,16 @@ public class PurchaseOrderService
 {
     private readonly IPurchaseOrderRepository _repository;
     private readonly IVendorRepository _vendorRepository;
+    private readonly CurrentUserContext _currentUserContext;
 
-    public PurchaseOrderService(IPurchaseOrderRepository repository, IVendorRepository vendorRepository)
+    public PurchaseOrderService(IPurchaseOrderRepository repository, IVendorRepository vendorRepository, CurrentUserContext currentUserContext)
     {
         _repository = repository;
         _vendorRepository = vendorRepository;
+        _currentUserContext = currentUserContext;
     }
+
+    public Task<List<PurchaseOrderStatusHistory>> GetStatusHistoryAsync(int purchaseOrderId) => _repository.GetStatusHistoryAsync(purchaseOrderId);
 
     public Task<List<PurchaseOrder>> GetAllWithVendorAsync() => _repository.GetAllWithVendorAsync();
 
@@ -54,6 +58,15 @@ public class PurchaseOrderService
         po.TotalAmount = po.Lines.Sum(l => l.LineTotal);
 
         await _repository.AddAsync(po);
+
+        await _repository.AddStatusHistoryAsync(new PurchaseOrderStatusHistory
+        {
+            PurchaseOrderId = po.PurchaseOrderId,
+            FromStatus = null,
+            ToStatus = po.Status,
+            ChangedByUserId = _currentUserContext.CurrentUser!.UserId,
+        });
+
         return po;
     }
 
@@ -62,6 +75,9 @@ public class PurchaseOrderService
     {
         await ValidateVendorAsync(vendorId);
         ValidateLines(lines, status);
+
+        var existing = await _repository.GetByIdAsync(purchaseOrderId);
+        var oldStatus = existing?.Status;
 
         var lineEntities = lines
             .Select(l => new PurchaseOrderLine
@@ -84,6 +100,17 @@ public class PurchaseOrderService
         };
 
         await _repository.UpdateWithLinesAsync(header, lineEntities);
+
+        if (oldStatus is not null && oldStatus != status)
+        {
+            await _repository.AddStatusHistoryAsync(new PurchaseOrderStatusHistory
+            {
+                PurchaseOrderId = purchaseOrderId,
+                FromStatus = oldStatus,
+                ToStatus = status,
+                ChangedByUserId = _currentUserContext.CurrentUser!.UserId,
+            });
+        }
     }
 
     private async Task ValidateVendorAsync(int vendorId)

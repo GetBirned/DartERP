@@ -28,6 +28,7 @@ public class PurchaseOrderEditForm : Form
     private readonly DataGridView _linesGrid;
     private readonly LetterSpacedLabel _totalLabel;
     private readonly Label _errorLabel;
+    private readonly DashboardListCard _historyCard;
 
     public PurchaseOrderEditForm(PurchaseOrderService service, List<Vendor> activeVendors, List<Product> activeProducts, PurchaseOrder? existing)
     {
@@ -75,7 +76,12 @@ public class PurchaseOrderEditForm : Form
 
         var footer = BuildFooterPanel(out _totalLabel, out _errorLabel);
 
+        _historyCard = new DashboardListCard("Status History", "No status changes recorded yet.", stacked: true);
+        var historyHost = new Panel { Dock = DockStyle.Right, Width = 276, Padding = new Padding(8, 0, 24, 8) };
+        historyHost.Controls.Add(_historyCard);
+
         Controls.Add(gridHost);
+        Controls.Add(historyHost);
         Controls.Add(addLineBar);
         Controls.Add(linesLabel);
         Controls.Add(headerPanel);
@@ -86,11 +92,16 @@ public class PurchaseOrderEditForm : Form
             // ComboBox.SelectedValue (DataSource+ValueMember binding) only takes effect
             // once the control's native handle exists, so this must wait for Load rather
             // than run here in the constructor.
-            Load += (_, _) => LoadExisting(existing);
+            Load += async (_, _) =>
+            {
+                LoadExisting(existing);
+                await LoadHistoryAsync(existing.PurchaseOrderId);
+            };
         }
         else
         {
             _statusBox.SelectedItem = PurchaseOrderStatus.Draft;
+            _historyCard.SetRows(Array.Empty<DashboardListRow>());
         }
 
         RecalculateTotal();
@@ -293,6 +304,18 @@ public class PurchaseOrderEditForm : Form
 
         foreach (var line in po.Lines)
             AddLine(line.ProductId, line.Quantity, line.UnitCost);
+    }
+
+    private async Task LoadHistoryAsync(int purchaseOrderId)
+    {
+        var history = await _service.GetStatusHistoryAsync(purchaseOrderId);
+        var rows = history.Select(h => new DashboardListRow(
+                h.FromStatus is null
+                    ? $"Created as {EnumDisplay.For(h.ToStatus)}"
+                    : $"{EnumDisplay.For(h.FromStatus.Value)} → {EnumDisplay.For(h.ToStatus)}",
+                $"{h.ChangedByUser?.DisplayName ?? "Unknown"} · {h.ChangedAt.ToLocalTime():MM/dd/yyyy h:mm tt}"))
+            .ToList();
+        _historyCard.SetRows(rows);
     }
 
     private void AddLine(int productId, int quantity, decimal unitCost)

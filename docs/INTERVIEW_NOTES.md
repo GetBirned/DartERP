@@ -45,6 +45,13 @@ Quick-reference talking points. Not meant to be read top to bottom — skim befo
 - Navigation/collection properties (`Product.WorkOrders`, `PurchaseOrder.Vendor`, etc.) get hidden after binding by checking each auto-generated column's `ValueType` against a short list of scalar types — one generic rule, not per-entity column lists, so it stays "zero new code per table"
 - `List<T>` doesn't support click-to-sort out of the box the way a `BindingList<T>` or `DataView` would; sorting is done by hand off `ColumnHeaderMouseClick` — reflect on the clicked column's `DataPropertyName`, sort the current rows, rebuild a concretely-typed `List<T>` (via `MakeGenericType`) so `AutoGenerateColumns` doesn't just show every column as "object", and rebind
 
+## Audit trail on status transitions
+
+- Two dedicated tables (`PurchaseOrderStatusHistory`, `WorkOrderStatusHistory`) instead of one polymorphic `EntityType`/`EntityId` audit table — same "no generic abstraction beyond `IRepository<T>`" philosophy as the rest of the schema, and a polymorphic `EntityId` couldn't carry a real FK constraint anyway
+- What counts as a loggable event is a business-layer decision: `PurchaseOrderService`/`WorkOrderService` decide when to write a row (initial entry on create, another only when a save actually changes `Status` — not on every header edit), while the repository methods (`AddStatusHistoryAsync`) just insert whatever they're handed
+- First `Application.Services` classes to take a `CurrentUserContext` dependency (previously only WinForms forms touched it) — zero DI risk since it's already a `Singleton` in the same container
+- UI reuses `DashboardListCard` rather than a new control, with a `stacked` display mode added so its two lines of text (a status transition, then who/when) both get full width instead of the dashboard's default side-by-side name/dollar-amount split, which was too cramped for the PO/Work Order dialogs' narrower side panel
+
 ## .NET / EF Core
 
 - .NET 8, nullable reference types enabled solution-wide

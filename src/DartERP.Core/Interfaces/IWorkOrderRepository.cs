@@ -9,4 +9,7 @@ public interface IWorkOrderRepository : IRepository<WorkOrder>
     Task<string> GetNextWorkOrderNumberAsync();
     Task<int> GetOpenCountAsync();
     Task<int> GetUnitsInProductionAsync();
+    Task<List<WorkOrderStatusHistory>> GetStatusHistoryAsync(int workOrderId);
+    Task<List<WorkOrderStatusHistory>> GetAllStatusHistoryAsync();
+    Task AddStatusHistoryAsync(WorkOrderStatusHistory entry);
 }

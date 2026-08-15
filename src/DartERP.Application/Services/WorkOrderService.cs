@@ -9,12 +9,16 @@ public class WorkOrderService
 {
     private readonly IWorkOrderRepository _repository;
     private readonly IProductRepository _productRepository;
+    private readonly CurrentUserContext _currentUserContext;
 
-    public WorkOrderService(IWorkOrderRepository repository, IProductRepository productRepository)
+    public WorkOrderService(IWorkOrderRepository repository, IProductRepository productRepository, CurrentUserContext currentUserContext)
     {
         _repository = repository;
         _productRepository = productRepository;
+        _currentUserContext = currentUserContext;
     }
+
+    public Task<List<WorkOrderStatusHistory>> GetStatusHistoryAsync(int workOrderId) => _repository.GetStatusHistoryAsync(workOrderId);
 
     public Task<List<WorkOrder>> GetAllWithProductAsync() => _repository.GetAllWithProductAsync();
 
@@ -42,6 +46,15 @@ public class WorkOrderService
         };
 
         await _repository.AddAsync(workOrder);
+
+        await _repository.AddStatusHistoryAsync(new WorkOrderStatusHistory
+        {
+            WorkOrderId = workOrder.WorkOrderId,
+            FromStatus = null,
+            ToStatus = workOrder.Status,
+            ChangedByUserId = _currentUserContext.CurrentUser!.UserId,
+        });
+
         return workOrder;
     }
 
@@ -52,6 +65,8 @@ public class WorkOrderService
 
         await ValidateAsync(productId, quantity, startDate, dueDate);
 
+        var oldStatus = existing.Status;
+
         existing.ProductId = productId;
         existing.Quantity = quantity;
         existing.StartDate = startDate;
@@ -60,6 +75,17 @@ public class WorkOrderService
         existing.Status = status;
 
         await _repository.UpdateAsync(existing);
+
+        if (oldStatus != status)
+        {
+            await _repository.AddStatusHistoryAsync(new WorkOrderStatusHistory
+            {
+                WorkOrderId = existing.WorkOrderId,
+                FromStatus = oldStatus,
+                ToStatus = status,
+                ChangedByUserId = _currentUserContext.CurrentUser!.UserId,
+            });
+        }
     }
 
     public static bool IsLocked(WorkOrderStatus status) =>

@@ -7,7 +7,9 @@ namespace DartERP.Tests.Fakes;
 public class FakeWorkOrderRepository : IWorkOrderRepository
 {
     private readonly List<WorkOrder> _workOrders = [];
+    private readonly List<WorkOrderStatusHistory> _statusHistory = [];
     private int _nextId = 1;
+    private int _nextHistoryId = 1;
 
     public FakeWorkOrderRepository(IEnumerable<WorkOrder>? seed = null)
     {
@@ -42,4 +44,17 @@ public class FakeWorkOrderRepository : IWorkOrderRepository
 
     public Task<int> GetUnitsInProductionAsync() =>
         Task.FromResult(_workOrders.Where(w => w.Status is WorkOrderStatus.Released or WorkOrderStatus.InProduction).Sum(w => w.Quantity));
+
+    public Task<List<WorkOrderStatusHistory>> GetStatusHistoryAsync(int workOrderId) =>
+        Task.FromResult(_statusHistory.Where(h => h.WorkOrderId == workOrderId).OrderByDescending(h => h.ChangedAt).ToList());
+
+    public Task<List<WorkOrderStatusHistory>> GetAllStatusHistoryAsync() =>
+        Task.FromResult(_statusHistory.OrderByDescending(h => h.ChangedAt).ToList());
+
+    public Task AddStatusHistoryAsync(WorkOrderStatusHistory entry)
+    {
+        entry.WorkOrderStatusHistoryId = _nextHistoryId++;
+        _statusHistory.Add(entry);
+        return Task.CompletedTask;
+    }
 }

@@ -12,6 +12,9 @@ public interface IPurchaseOrderRepository : IRepository<PurchaseOrder>
     Task<string> GetNextPurchaseOrderNumberAsync();
     Task<int> GetOpenCountAsync();
     Task<Dictionary<PurchaseOrderStatus, int>> GetCountsByStatusAsync();
+    Task<List<PurchaseOrderStatusHistory>> GetStatusHistoryAsync(int purchaseOrderId);
+    Task<List<PurchaseOrderStatusHistory>> GetAllStatusHistoryAsync();
+    Task AddStatusHistoryAsync(PurchaseOrderStatusHistory entry);
 
     /// <summary>
     /// Replaces the header fields and full line set for an existing purchase order.

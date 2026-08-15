@@ -15,4 +15,5 @@ public class WorkOrder
 
     public Product? Product { get; set; }
     public ICollection<SerializedItem> SerializedItems { get; set; } = new List<SerializedItem>();
+    public ICollection<WorkOrderStatusHistory> StatusHistory { get; set; } = new List<WorkOrderStatusHistory>();
 }

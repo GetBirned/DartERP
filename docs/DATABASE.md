@@ -53,6 +53,22 @@ erDiagram
         int Quantity
         string Status
     }
+    PURCHASE_ORDER_STATUS_HISTORY {
+        int PurchaseOrderStatusHistoryId PK
+        int PurchaseOrderId FK
+        string FromStatus
+        string ToStatus
+        int ChangedByUserId FK
+        datetime ChangedAt
+    }
+    WORK_ORDER_STATUS_HISTORY {
+        int WorkOrderStatusHistoryId PK
+        int WorkOrderId FK
+        string FromStatus
+        string ToStatus
+        int ChangedByUserId FK
+        datetime ChangedAt
+    }
     SERIALIZED_ITEM {
         int SerializedItemId PK
         string SerialNumber UK
@@ -95,9 +111,13 @@ erDiagram
     SERIALIZED_ITEM ||--o{ QUALITY_INSPECTION : "inspected via"
     SERIALIZED_ITEM ||--o{ DISPOSITION : "disposed via"
     CUSTOMER ||--o{ DISPOSITION : "receives"
+    PURCHASE_ORDER ||--o{ PURCHASE_ORDER_STATUS_HISTORY : "status changes"
+    WORK_ORDER ||--o{ WORK_ORDER_STATUS_HISTORY : "status changes"
+    USER ||--o{ PURCHASE_ORDER_STATUS_HISTORY : "changed by"
+    USER ||--o{ WORK_ORDER_STATUS_HISTORY : "changed by"
 ```
 
-`Customer`'s only foreign key relationship in the current schema is `Disposition` (a Sold/Transferred disposition's recipient) — Sales Orders, which would link a customer to an order, were cut from this build (see the README's Future Improvements). `User` has no foreign key relationships at all — nothing in the schema references who created or modified a record yet (see Future Improvements: audit history).
+`Customer`'s only foreign key relationship in the current schema is `Disposition` (a Sold/Transferred disposition's recipient) — Sales Orders, which would link a customer to an order, were cut from this build (see the README's Future Improvements). `User` is referenced by `PurchaseOrderStatusHistories`/`WorkOrderStatusHistories` as `ChangedByUserId` — the audit trail on status transitions, described below.
 
 ## Tables
 
@@ -108,7 +128,9 @@ erDiagram
 | `Products` | Unique index on `SKU`. `Category` stored as its enum name. `UnitCost`/`SalePrice` are `decimal(18,2)`. |
 | `PurchaseOrders` | Unique index on `PurchaseOrderNumber`. `Status` stored as its enum name. `VendorId` FK is `Restrict` on delete (vendors are soft-deleted, never hard-deleted, so this is a belt-and-suspenders guard). |
 | `PurchaseOrderLines` | FK to `PurchaseOrders` is `Cascade` — lines are owned entirely by their parent order. FK to `Products` is `Restrict`. |
+| `PurchaseOrderStatusHistories` | One row per status transition on a `PurchaseOrder` — `FromStatus` (nullable, `null` means "created") and `ToStatus`, both stored as their enum name, plus `ChangedByUserId` and `ChangedAt`. Written by `PurchaseOrderService`, never the repository directly (see below). FK to `PurchaseOrders` is `Cascade` — history has no independent existence. FK to `Users` is `Restrict`. |
 | `WorkOrders` | Unique index on `WorkOrderNumber`. FK to `Products` is `Restrict`. |
+| `WorkOrderStatusHistories` | Same shape and same write path as `PurchaseOrderStatusHistories`, for `WorkOrder` status transitions. |
 | `SerializedItems` | Unique index on `SerialNumber`, enforced at both the database (unique index) and application layer (`ISerializedItemRepository.SerialNumberExistsAsync`, checked before insert). FKs to `Products` and `WorkOrders` are `Restrict`. |
 | `QualityInspections` | FK to `SerializedItems` is `Cascade` — inspections are owned by the item they're inspecting. |
 | `Dispositions` | The ATF-style Acquisition & Disposition log — one row per serialized item leaving/re-entering inventory (Sold/Transferred/Destroyed/Returned). FK to `SerializedItems` is `Cascade`. FK to `Customers` is `Restrict` (nullable — only Sold/Transferred dispositions require a recipient) since customers are soft-deleted, never hard-deleted. `Type` stored as its enum name. |
@@ -117,6 +139,12 @@ erDiagram
 ## Why `Restrict` almost everywhere, `Cascade` only for true parent/child pairs
 
 `PurchaseOrder → PurchaseOrderLine`, `SerializedItem → QualityInspection`, and `SerializedItem → Disposition` are the only relationships where the child genuinely has no independent existence — a line isn't meaningful without its order, an inspection isn't meaningful without the item it inspected, a disposition isn't meaningful without the item it disposed of. Everywhere else (`Vendor → PurchaseOrder`, `Product → WorkOrder`, `Customer → Disposition`, etc.) uses `Restrict`, because those parent records are soft-deleted rather than removed, so an accidental cascade delete should never be possible in practice — but `Restrict` makes that a guarantee enforced by the database, not just a convention.
+
+## Audit trail on status transitions
+
+`PurchaseOrderStatusHistory`/`WorkOrderStatusHistory` are two dedicated tables rather than one polymorphic `EntityType`/`EntityId` audit table — this schema has consistently favored explicit, strongly-typed structure over generic abstraction (`IRepository<T>` is deliberately the one generic pattern in use; see `docs/INTERVIEW_NOTES.md`). A polymorphic `EntityId` also couldn't carry a real foreign key constraint, which would have been the first "fake" FK in this schema.
+
+What counts as a loggable event is a business-layer decision, not a persistence-layer one: `PurchaseOrderService`/`WorkOrderService` decide when to write a history row (an initial entry on create, another only when a save actually changes `Status`), while `IPurchaseOrderRepository.AddStatusHistoryAsync`/`IWorkOrderRepository.AddStatusHistoryAsync` just insert whatever entry they're handed. Both services take a `CurrentUserContext` dependency to attribute the change to whoever's signed in — the first `Application.Services` class to depend on it (previously only WinForms forms did), but it's already a singleton in the same DI container, so there's no lifetime mismatch.
 
 ## Database Explorer
 

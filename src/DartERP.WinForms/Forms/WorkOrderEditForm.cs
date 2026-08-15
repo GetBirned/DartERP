@@ -2,6 +2,7 @@ using DartERP.Application.Services;
 using DartERP.Application.Validation;
 using DartERP.Core.Enums;
 using DartERP.Core.Models;
+using DartERP.WinForms.Controls;
 using DartERP.WinForms.Styling;
 
 namespace DartERP.WinForms.Forms;
@@ -21,6 +22,7 @@ public class WorkOrderEditForm : Form
     private readonly TextBox _notesBox = new TextBox().StyleAsInput();
     private readonly Label _errorLabel;
     private readonly Button _saveButton;
+    private readonly DashboardListCard _historyCard;
 
     public WorkOrderEditForm(WorkOrderService service, List<Product> activeProducts, WorkOrder? existing)
     {
@@ -35,7 +37,7 @@ public class WorkOrderEditForm : Form
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;
-        ClientSize = new Size(460, 420);
+        ClientSize = new Size(740, 460);
         BackColor = Theme.CardBackground;
 
         _productBox.DisplayMember = "ProductName";
@@ -67,6 +69,11 @@ public class WorkOrderEditForm : Form
 
         Controls.Add(layout);
 
+        _historyCard = new DashboardListCard("Status History", "No status changes recorded yet.", stacked: true);
+        var historyHost = new Panel { Dock = DockStyle.Right, Width = 276, Padding = new Padding(8, 20, 24, 16) };
+        historyHost.Controls.Add(_historyCard);
+        Controls.Add(historyHost);
+
         var bar = new Panel { Dock = DockStyle.Bottom, Height = 64, Padding = new Padding(24, 0, 24, 16) };
         _saveButton = new Button { Text = "Save", Width = 100, Dock = DockStyle.Right }.StyleAsPrimaryButton();
         _saveButton.Click += async (_, _) => await SaveAsync();
@@ -81,17 +88,31 @@ public class WorkOrderEditForm : Form
             // ComboBox.SelectedValue (DataSource+ValueMember binding) only takes effect
             // once the control's native handle exists, so this must wait for Load rather
             // than run here in the constructor.
-            Load += (_, _) =>
+            Load += async (_, _) =>
             {
                 LoadExisting(existing);
                 if (_isLocked)
                     ApplyLockedState();
+                await LoadHistoryAsync(existing.WorkOrderId);
             };
         }
         else
         {
             _statusBox.SelectedItem = WorkOrderStatus.Planned;
+            _historyCard.SetRows(Array.Empty<DashboardListRow>());
         }
+    }
+
+    private async Task LoadHistoryAsync(int workOrderId)
+    {
+        var history = await _service.GetStatusHistoryAsync(workOrderId);
+        var rows = history.Select(h => new DashboardListRow(
+                h.FromStatus is null
+                    ? $"Created as {EnumDisplay.For(h.ToStatus)}"
+                    : $"{EnumDisplay.For(h.FromStatus.Value)} → {EnumDisplay.For(h.ToStatus)}",
+                $"{h.ChangedByUser?.DisplayName ?? "Unknown"} · {h.ChangedAt.ToLocalTime():MM/dd/yyyy h:mm tt}"))
+            .ToList();
+        _historyCard.SetRows(rows);
     }
 
     private void LoadExisting(WorkOrder w)

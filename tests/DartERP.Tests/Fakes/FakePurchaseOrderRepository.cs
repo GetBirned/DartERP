@@ -6,8 +6,10 @@ namespace DartERP.Tests.Fakes;
 public class FakePurchaseOrderRepository : IPurchaseOrderRepository
 {
     private readonly List<PurchaseOrder> _orders = [];
+    private readonly List<PurchaseOrderStatusHistory> _statusHistory = [];
     private int _nextId = 1;
     private int _nextLineId = 1;
+    private int _nextHistoryId = 1;
 
     public Task<PurchaseOrder?> GetByIdAsync(int id) => Task.FromResult(_orders.FirstOrDefault(o => o.PurchaseOrderId == id));
 
@@ -40,6 +42,19 @@ public class FakePurchaseOrderRepository : IPurchaseOrderRepository
 
     public Task<Dictionary<Core.Enums.PurchaseOrderStatus, int>> GetCountsByStatusAsync() =>
         Task.FromResult(_orders.GroupBy(o => o.Status).ToDictionary(g => g.Key, g => g.Count()));
+
+    public Task<List<PurchaseOrderStatusHistory>> GetStatusHistoryAsync(int purchaseOrderId) =>
+        Task.FromResult(_statusHistory.Where(h => h.PurchaseOrderId == purchaseOrderId).OrderByDescending(h => h.ChangedAt).ToList());
+
+    public Task<List<PurchaseOrderStatusHistory>> GetAllStatusHistoryAsync() =>
+        Task.FromResult(_statusHistory.OrderByDescending(h => h.ChangedAt).ToList());
+
+    public Task AddStatusHistoryAsync(PurchaseOrderStatusHistory entry)
+    {
+        entry.PurchaseOrderStatusHistoryId = _nextHistoryId++;
+        _statusHistory.Add(entry);
+        return Task.CompletedTask;
+    }
 
     public Task UpdateWithLinesAsync(PurchaseOrder header, List<PurchaseOrderLine> lines)
     {

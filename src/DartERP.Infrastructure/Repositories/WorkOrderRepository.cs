@@ -90,4 +90,27 @@ public class WorkOrderRepository : IWorkOrderRepository
             .Where(w => w.Status == WorkOrderStatus.Released || w.Status == WorkOrderStatus.InProduction)
             .SumAsync(w => w.Quantity);
     }
+
+    public async Task<List<WorkOrderStatusHistory>> GetStatusHistoryAsync(int workOrderId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.WorkOrderStatusHistories
+            .Include(h => h.ChangedByUser)
+            .Where(h => h.WorkOrderId == workOrderId)
+            .OrderByDescending(h => h.ChangedAt)
+            .ToListAsync();
+    }
+
+    public async Task<List<WorkOrderStatusHistory>> GetAllStatusHistoryAsync()
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.WorkOrderStatusHistories.OrderByDescending(h => h.ChangedAt).ToListAsync();
+    }
+
+    public async Task AddStatusHistoryAsync(WorkOrderStatusHistory entry)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        context.WorkOrderStatusHistories.Add(entry);
+        await context.SaveChangesAsync();
+    }
 }
