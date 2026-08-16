@@ -328,6 +328,7 @@ public class MainForm : Form
             _serviceProvider.GetRequiredService<IQualityInspectionRepository>(),
             _serviceProvider.GetRequiredService<IDispositionRepository>(),
             _serviceProvider.GetRequiredService<IUserRepository>()),
+        ["Tech Glossary"] = () => new TechGlossaryControl(),
         ["Settings"] = () => new SettingsControl(),
     };
 

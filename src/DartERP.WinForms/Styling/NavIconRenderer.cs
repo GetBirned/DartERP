@@ -50,6 +50,9 @@ public static class NavIconRenderer
             case "Database":
                 DrawDatabase(g, pen, bounds);
                 break;
+            case "Tech Glossary":
+                DrawBook(g, pen, bounds);
+                break;
             case "Settings":
                 DrawSliders(g, pen, bounds);
                 break;
@@ -226,6 +229,31 @@ public static class NavIconRenderer
 
         var midY = sideTop + (sideBottom - sideTop) / 2f - capHeight / 2f;
         g.DrawArc(pen, b.Left, midY, b.Width, capHeight, 0, 180);
+    }
+
+    private static void DrawBook(Graphics g, Pen pen, Rectangle b)
+    {
+        var centerX = b.Left + b.Width / 2f;
+        var top = b.Top + b.Height * 0.15f;
+        var bottom = b.Bottom - b.Height * 0.1f;
+
+        using var leftPage = new GraphicsPath();
+        leftPage.AddBezier(
+            new PointF(centerX, top),
+            new PointF(b.Left, top),
+            new PointF(b.Left, bottom),
+            new PointF(centerX, bottom));
+        g.DrawPath(pen, leftPage);
+
+        using var rightPage = new GraphicsPath();
+        rightPage.AddBezier(
+            new PointF(centerX, top),
+            new PointF(b.Right, top),
+            new PointF(b.Right, bottom),
+            new PointF(centerX, bottom));
+        g.DrawPath(pen, rightPage);
+
+        g.DrawLine(pen, centerX, top, centerX, bottom);
     }
 
     private static void DrawSliders(Graphics g, Pen pen, Rectangle b)
