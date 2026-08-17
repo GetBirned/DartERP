@@ -24,6 +24,7 @@ public class SfBarChartCard : DashboardCard
             Dock = DockStyle.Fill,
             BackColor = Theme.CardBackground,
             ShowLegend = false,
+            ShowToolTips = true,
         };
         _chart.ChartArea.BorderWidth = 0;
         _chart.ChartArea.BackInterior = new BrushInfo(Theme.CardBackground);
@@ -62,5 +63,8 @@ public class SfBarChartCard : DashboardCard
         foreach (var bar in bars)
             series.Points.Add(bar.Label, (double)bar.Value);
         _chart.Series.Add(series);
+
+        for (var i = 0; i < bars.Count; i++)
+            series.Styles[i].ToolTip = $"{bars[i].Label}: {bars[i].Value:C0}";
     }
 }

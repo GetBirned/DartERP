@@ -6,6 +6,12 @@ namespace DartERP.WinForms.Controls;
 
 public class DashboardControl : UserControl
 {
+    // MainForm owns navigation between modules; this control has no
+    // reference to MainForm (or even knows it's hosted inside one), so a
+    // clicked KPI card just reports which module name it wants and leaves
+    // the actual NavigateTo call to whoever's listening.
+    public event Action<string>? NavigationRequested;
+
     private readonly DashboardService _service;
     private readonly TableLayoutPanel _kpiPanel;
     private readonly TableLayoutPanel _cardsPanel;
@@ -87,12 +93,12 @@ public class DashboardControl : UserControl
             return;
 
         _kpiPanel.Controls.Clear();
-        AddKpiCard(0, 0, "Active Customers", summary.ActiveCustomers.ToString(), Theme.AccentPrimary);
-        AddKpiCard(1, 0, "Active Vendors", summary.ActiveVendors.ToString(), Theme.AccentPrimary);
-        AddKpiCard(2, 0, "Open Purchase Orders", summary.OpenPurchaseOrders.ToString(), Theme.WarningAmber);
-        AddKpiCard(0, 1, "Open Work Orders", summary.OpenWorkOrders.ToString(), Theme.WarningAmber);
-        AddKpiCard(1, 1, "Inventory Value", summary.InventoryValue.ToString("C0"), Theme.SuccessGreen);
-        AddKpiCard(2, 1, "Units In Production", summary.UnitsInProduction.ToString(), Theme.SuccessGreen);
+        AddKpiCard(0, 0, "Active Customers", summary.ActiveCustomers.ToString(), Theme.AccentPrimary, "Customers");
+        AddKpiCard(1, 0, "Active Vendors", summary.ActiveVendors.ToString(), Theme.AccentPrimary, "Vendors");
+        AddKpiCard(2, 0, "Open Purchase Orders", summary.OpenPurchaseOrders.ToString(), Theme.WarningAmber, "Purchase Orders");
+        AddKpiCard(0, 1, "Open Work Orders", summary.OpenWorkOrders.ToString(), Theme.WarningAmber, "Work Orders");
+        AddKpiCard(1, 1, "Inventory Value", summary.InventoryValue.ToString("C0"), Theme.SuccessGreen, "Inventory");
+        AddKpiCard(2, 1, "Units In Production", summary.UnitsInProduction.ToString(), Theme.SuccessGreen, "Work Orders");
 
         _recentPurchaseOrdersCard.SetRows(summary.RecentPurchaseOrders
             .Select(po => new DashboardListRow(
@@ -135,9 +141,10 @@ public class DashboardControl : UserControl
             .ToList());
     }
 
-    private void AddKpiCard(int column, int row, string title, string value, Color accentColor)
+    private void AddKpiCard(int column, int row, string title, string value, Color accentColor, string navigateTarget)
     {
-        var card = new KpiCard(title, value) { AccentColor = accentColor, Dock = DockStyle.Fill };
+        var card = new KpiCard(title, value) { AccentColor = accentColor, Dock = DockStyle.Fill, Cursor = Cursors.Hand };
+        card.Click += (_, _) => NavigationRequested?.Invoke(navigateTarget);
         _kpiPanel.Controls.Add(card, column, row);
     }
 }

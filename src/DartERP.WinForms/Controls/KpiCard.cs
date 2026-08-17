@@ -41,6 +41,13 @@ public class KpiCard : Panel
 
         Controls.Add(_valueLabel);
         Controls.Add(_titleLabel);
+
+        // Clicks on the child labels don't bubble to the panel's own Click
+        // event by default — needed so the whole card (not just the sliver
+        // of bare panel around the labels) counts as clickable when a
+        // caller wires up navigation via this.Click.
+        _titleLabel.Click += (_, e) => OnClick(e);
+        _valueLabel.Click += (_, e) => OnClick(e);
     }
 
     public string Value

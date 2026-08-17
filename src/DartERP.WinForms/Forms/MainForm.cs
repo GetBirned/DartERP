@@ -296,7 +296,12 @@ public class MainForm : Form
 
     private Dictionary<string, Func<Control>> BuildModuleFactories() => new()
     {
-        ["Dashboard"] = () => new DashboardControl(_serviceProvider.Resolve<DashboardService>()),
+        ["Dashboard"] = () =>
+        {
+            var dashboard = new DashboardControl(_serviceProvider.Resolve<DashboardService>());
+            dashboard.NavigationRequested += NavigateTo;
+            return dashboard;
+        },
         ["Customers"] = () => new CustomerListControl(_serviceProvider.Resolve<CustomerService>()),
         ["Vendors"] = () => new VendorListControl(_serviceProvider.Resolve<VendorService>()),
         ["Products"] = () => new ProductListControl(_serviceProvider.Resolve<ProductService>()),

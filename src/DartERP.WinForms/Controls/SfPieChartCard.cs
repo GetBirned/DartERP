@@ -25,6 +25,7 @@ public class SfPieChartCard : DashboardCard
             Dock = DockStyle.Fill,
             BackColor = Theme.CardBackground,
             ShowLegend = true,
+            ShowToolTips = true,
         };
         _chart.ChartArea.BorderWidth = 0;
         _chart.ChartArea.BackInterior = new BrushInfo(Theme.CardBackground);
@@ -81,6 +82,10 @@ public class SfPieChartCard : DashboardCard
             // docked directly underneath, that showed up as a stray colored
             // crescent bleeding into the legend row.
             series.Styles[i].DisplayShadow = false;
+            // A literal per-point string rather than PointsToolTipFormat's
+            // token syntax — one less API surface to guess at when a plain
+            // string does the same job.
+            series.Styles[i].ToolTip = $"{visible[i].Label}: {visible[i].Value:0}";
         }
     }
 }
