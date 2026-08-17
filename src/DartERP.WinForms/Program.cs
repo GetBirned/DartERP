@@ -24,7 +24,16 @@ static class Program
         var configuration = new ConfigurationBuilder()
             .SetBasePath(AppContext.BaseDirectory)
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+            .AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: false)
             .Build();
+
+        // My Syncfusion license key lives in the gitignored appsettings.local.json,
+        // never in source control. Registering it is optional at runtime too —
+        // without it the controls just fall back to an unlicensed trial dialog
+        // instead of the app failing to start.
+        var syncfusionLicenseKey = configuration["Syncfusion:LicenseKey"];
+        if (!string.IsNullOrWhiteSpace(syncfusionLicenseKey))
+            Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense(syncfusionLicenseKey);
 
         var services = new ServiceCollection();
         ConfigureServices(services, configuration);
@@ -33,7 +42,7 @@ static class Program
 
         EnsureDatabaseReady(serviceProvider);
 
-        var currentUserContext = serviceProvider.GetRequiredService<CurrentUserContext>();
+        var currentUserContext = serviceProvider.Resolve<CurrentUserContext>();
 
         // Loops back to the login screen after a Log Out (MainForm.LoggedOut)
         // rather than exiting the process — a plain window close (X button)
@@ -41,11 +50,11 @@ static class Program
         // like normal.
         while (true)
         {
-            using var loginForm = serviceProvider.GetRequiredService<LoginForm>();
+            using var loginForm = serviceProvider.Resolve<LoginForm>();
             if (loginForm.ShowDialog() != DialogResult.OK)
                 break;
 
-            using var mainForm = serviceProvider.GetRequiredService<MainForm>();
+            using var mainForm = serviceProvider.Resolve<MainForm>();
             System.Windows.Forms.Application.Run(mainForm);
 
             if (!mainForm.LoggedOut)
@@ -100,7 +109,7 @@ static class Program
     /// </summary>
     private static void EnsureDatabaseReady(IServiceProvider serviceProvider)
     {
-        var contextFactory = serviceProvider.GetRequiredService<IDbContextFactory<DartErpDbContext>>();
+        var contextFactory = serviceProvider.Resolve<IDbContextFactory<DartErpDbContext>>();
         using var context = contextFactory.CreateDbContext();
 
         context.Database.Migrate();

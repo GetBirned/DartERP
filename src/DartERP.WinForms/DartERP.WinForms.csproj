@@ -16,6 +16,9 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.*" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.*" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.*" />
+    <PackageReference Include="Syncfusion.Chart.Windows" Version="34.2.3" />
+    <PackageReference Include="Syncfusion.Licensing" Version="34.2.3" />
+    <PackageReference Include="Syncfusion.SfDataGrid.WinForms" Version="34.2.3" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -29,6 +32,12 @@
 
   <ItemGroup>
     <None Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- I gitignored this one (see .gitignore's *.local.json rule) since it
+         holds my Syncfusion license key. I only include it when it's present
+         so the project still builds cleanly on a fresh clone without it. -->
+    <None Include="appsettings.local.json" Condition="Exists('appsettings.local.json')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Assets\logo.png">
