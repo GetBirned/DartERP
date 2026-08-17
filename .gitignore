@@ -40,3 +40,6 @@ appsettings.local.json
 ## OS files
 .DS_Store
 Thumbs.db
+
+## Private, not for the repo
+docs/VIDEO_SCRIPT.md
