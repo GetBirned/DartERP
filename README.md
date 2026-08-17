@@ -2,7 +2,7 @@
 
 A lightweight manufacturing ERP desktop application built with C#, .NET 8, and WinForms — internal tooling for a fictional firearms manufacturing company, DERP Manufacturing.
 
-<img src="images/dartERP_logo_tan.png" alt="DartERP logo" width="220">
+<img src="images/DBDxDERP.png" alt="DartERP logo" width="320">
 
 ![Dashboard](screenshots/01_dashboard.png)
 
