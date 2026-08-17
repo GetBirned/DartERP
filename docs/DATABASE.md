@@ -154,7 +154,7 @@ erDiagram
 
 ## Audit trail on status transitions
 
-`PurchaseOrderStatusHistory`/`WorkOrderStatusHistory` are two dedicated tables rather than one polymorphic `EntityType`/`EntityId` audit table — this schema has consistently favored explicit, strongly-typed structure over generic abstraction (`IRepository<T>` is deliberately the one generic pattern in use; see `docs/INTERVIEW_NOTES.md`). A polymorphic `EntityId` also couldn't carry a real foreign key constraint, which would have been the first "fake" FK in this schema.
+`PurchaseOrderStatusHistory`/`WorkOrderStatusHistory` are two dedicated tables rather than one polymorphic `EntityType`/`EntityId` audit table — this schema has consistently favored explicit, strongly-typed structure over generic abstraction (`IRepository<T>` is deliberately the one generic pattern in use). A polymorphic `EntityId` also couldn't carry a real foreign key constraint, which would have been the first "fake" FK in this schema.
 
 What counts as a loggable event is a business-layer decision, not a persistence-layer one: `PurchaseOrderService`/`WorkOrderService` decide when to write a history row (an initial entry on create, another only when a save actually changes `Status`), while `IPurchaseOrderRepository.AddStatusHistoryAsync`/`IWorkOrderRepository.AddStatusHistoryAsync` just insert whatever entry they're handed. Both services take a `CurrentUserContext` dependency to attribute the change to whoever's signed in — the first `Application.Services` class to depend on it (previously only WinForms forms did), but it's already a singleton in the same DI container, so there's no lifetime mismatch.
 
