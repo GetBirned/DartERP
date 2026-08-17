@@ -10,6 +10,7 @@ public class KpiCard : Panel
     private readonly Label _titleLabel;
     private readonly Label _valueLabel;
     private Color _accentColor = Theme.AccentPrimary;
+    private bool _isHovered;
 
     public KpiCard(string title, string value)
     {
@@ -18,6 +19,15 @@ public class KpiCard : Panel
         Padding = new Padding(16, 14, 16, 14);
         Margin = new Padding(0, 0, 16, 16);
         this.ApplyRoundedRegion(10);
+
+        // Every KpiCard on the dashboard is clickable (navigates to the
+        // matching module), so the hover state is unconditional rather than
+        // gated behind a flag — a background tint blended toward the same
+        // SelectionHighlight color the sidebar's active nav item and grid
+        // row selection already use, plus a matching border, so "this is
+        // interactive" reads the same way it does everywhere else in the app.
+        MouseEnter += (_, _) => SetHovered(true);
+        MouseLeave += (_, _) => SetHovered(false);
 
         _titleLabel = new Label
         {
@@ -45,9 +55,15 @@ public class KpiCard : Panel
         // Clicks on the child labels don't bubble to the panel's own Click
         // event by default — needed so the whole card (not just the sliver
         // of bare panel around the labels) counts as clickable when a
-        // caller wires up navigation via this.Click.
+        // caller wires up navigation via this.Click. Same story for
+        // MouseEnter/Leave — without wiring the labels too, moving the
+        // cursor onto the (large) value label reads as leaving the card.
         _titleLabel.Click += (_, e) => OnClick(e);
         _valueLabel.Click += (_, e) => OnClick(e);
+        _titleLabel.MouseEnter += (_, _) => SetHovered(true);
+        _titleLabel.MouseLeave += (_, _) => SetHovered(false);
+        _valueLabel.MouseEnter += (_, _) => SetHovered(true);
+        _valueLabel.MouseLeave += (_, _) => SetHovered(false);
     }
 
     public string Value
@@ -62,6 +78,20 @@ public class KpiCard : Panel
         set { _accentColor = value; Invalidate(); }
     }
 
+    private void SetHovered(bool hovered)
+    {
+        if (_isHovered == hovered)
+            return;
+        _isHovered = hovered;
+        BackColor = hovered ? Blend(Theme.CardBackground, Theme.SelectionHighlight, 0.18f) : Theme.CardBackground;
+        Invalidate();
+    }
+
+    private static Color Blend(Color from, Color to, float amount) => Color.FromArgb(
+        (int)(from.R + (to.R - from.R) * amount),
+        (int)(from.G + (to.G - from.G) * amount),
+        (int)(from.B + (to.B - from.B) * amount));
+
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
@@ -73,7 +103,7 @@ public class KpiCard : Panel
         using var accentBrush = new SolidBrush(_accentColor);
         e.Graphics.FillRectangle(accentBrush, 0, 0, 4, Height);
 
-        using var borderPen = new Pen(Theme.BorderColor);
+        using var borderPen = new Pen(_isHovered ? Theme.SelectionHighlight : Theme.BorderColor);
         using var borderPath = RoundedCorners.CreatePath(ClientRectangle, 10);
         e.Graphics.DrawPath(borderPen, borderPath);
     }

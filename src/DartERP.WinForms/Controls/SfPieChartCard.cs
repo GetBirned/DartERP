@@ -17,6 +17,8 @@ public record PieSlice(string Label, float Value, Color Color);
 public class SfPieChartCard : DashboardCard
 {
     private readonly ChartControl _chart;
+    private readonly ToolTip _toolTip = new();
+    private int _lastToolTipIndex = -1;
 
     public SfPieChartCard(string title) : base(title)
     {
@@ -25,7 +27,12 @@ public class SfPieChartCard : DashboardCard
             Dock = DockStyle.Fill,
             BackColor = Theme.CardBackground,
             ShowLegend = true,
-            ShowToolTips = true,
+            // Syncfusion's own tooltip display pipeline never reliably
+            // reflects what's set through Styles[i].ToolTip or
+            // ChartRegion.ToolTip on this package version, so ShowToolTips
+            // stays off and a plain WinForms ToolTip is driven by hand
+            // instead — see the ChartRegionMouseEnter handler below.
+            ShowToolTips = false,
         };
         _chart.ChartArea.BorderWidth = 0;
         _chart.ChartArea.BackInterior = new BrushInfo(Theme.CardBackground);
@@ -50,27 +57,65 @@ public class SfPieChartCard : DashboardCard
         _chart.Legend.BackInterior = new BrushInfo(Theme.CardBackground);
         _chart.Legend.ShowBorder = false;
 
+        // ChartSeries.Styles[i].ToolTip looked like the "right" API for
+        // per-point tooltip text, but it doesn't reliably key by the
+        // point's actual insertion index once you start moving the mouse
+        // across a real, rendered chart — it resolved to the hovered
+        // category's alphabetical rank instead (confirmed by hovering
+        // every slice with a self-identifying tooltip and cross-
+        // referencing). ChartRegion.ToolTip (set from
+        // ChartRegionMouseEnter) sidesteps that specific bug — its
+        // PointIndex is computed fresh from mouse position, not looked up
+        // through the Styles array — but ShowToolTips' own display
+        // pipeline turned out not to read it at all (same as the bar
+        // chart). So this drives a plain WinForms ToolTip by hand instead,
+        // using PointIndex as the one piece of Syncfusion data that's
+        // actually trustworthy.
+        _chart.ChartRegionMouseEnter += (_, e) =>
+        {
+            if (e.Region.Type == ChartRegionType.SeriesPoint && e.Region.PointIndex >= 0 && e.Region.PointIndex < _visible.Count)
+            {
+                if (_lastToolTipIndex == e.Region.PointIndex)
+                    return;
+                _lastToolTipIndex = e.Region.PointIndex;
+                var slice = _visible[e.Region.PointIndex];
+                _toolTip.Show($"{slice.Label}: {slice.Value:0}", _chart, e.Point.X + 16, e.Point.Y + 16, 4000);
+            }
+            else
+            {
+                _lastToolTipIndex = -1;
+                _toolTip.Hide(_chart);
+            }
+        };
+        _chart.MouseLeave += (_, _) =>
+        {
+            _lastToolTipIndex = -1;
+            _toolTip.Hide(_chart);
+        };
+
         Body.Controls.Add(_chart);
     }
 
+    private List<PieSlice> _visible = new();
+
     public void SetData(IReadOnlyList<PieSlice> slices)
     {
-        var visible = slices.Where(s => s.Value > 0).ToList();
+        _visible = slices.Where(s => s.Value > 0).ToList();
 
         _chart.Series.Clear();
         var series = new ChartSeries("Status", ChartSeriesType.Pie);
-        foreach (var slice in visible)
+        foreach (var slice in _visible)
             series.Points.Add(slice.Label, (double)slice.Value);
         _chart.Series.Add(series);
 
-        for (var i = 0; i < visible.Count; i++)
+        for (var i = 0; i < _visible.Count; i++)
         {
-            series.Styles[i].Interior = new BrushInfo(visible[i].Color);
+            series.Styles[i].Interior = new BrushInfo(_visible[i].Color);
             // Points.Add(string, double) stores the label as the point's
             // Category, but the legend reads its text from here instead —
             // without this it shows each slice's raw value ("1", "2"...)
             // rather than the status name.
-            series.Styles[i].Text = visible[i].Label;
+            series.Styles[i].Text = _visible[i].Label;
             // Legend.TextColor (set once, above) turned out to only affect
             // the legend title, not each entry's label — same "shared
             // property doesn't actually drive rendering" trap as
@@ -82,10 +127,6 @@ public class SfPieChartCard : DashboardCard
             // docked directly underneath, that showed up as a stray colored
             // crescent bleeding into the legend row.
             series.Styles[i].DisplayShadow = false;
-            // A literal per-point string rather than PointsToolTipFormat's
-            // token syntax — one less API surface to guess at when a plain
-            // string does the same job.
-            series.Styles[i].ToolTip = $"{visible[i].Label}: {visible[i].Value:0}";
         }
     }
 }
