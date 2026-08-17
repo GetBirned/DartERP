@@ -2,6 +2,7 @@ using System.Collections;
 using DartERP.Core.Interfaces;
 using DartERP.WinForms.Local;
 using DartERP.WinForms.Styling;
+using Syncfusion.WinForms.DataGrid;
 
 namespace DartERP.WinForms.Controls;
 
@@ -9,7 +10,7 @@ namespace DartERP.WinForms.Controls;
 /// A generic, read-only table browser. Every other grid in this app defines
 /// its columns by hand and goes through Application.Services — this one
 /// deliberately does neither. It binds straight to whichever repository's
-/// plain GetAllAsync() the user picks and lets DataGridView's
+/// plain GetAllAsync() the user picks and lets SfDataGrid's
 /// AutoGenerateColumns build columns via reflection, because the whole
 /// point is showing the actual database contents, not a curated business
 /// view of them. Going around the service layer is on purpose too: most
@@ -22,12 +23,10 @@ public class DatabaseExplorerControl : UserControl
 {
     private readonly Dictionary<string, Func<Task<IList>>> _loaders;
     private readonly ListBox _tableList;
-    private readonly DataGridView _grid;
+    private readonly SfDataGrid _grid;
     private readonly Label _rowCountLabel;
 
     private IList _currentRows = Array.Empty<object>();
-    private string? _sortProperty;
-    private bool _sortAscending = true;
 
     public DatabaseExplorerControl(
         ICustomerRepository customerRepository,
@@ -91,10 +90,29 @@ public class DatabaseExplorerControl : UserControl
         _tableList.SelectedIndexChanged += async (_, _) => await LoadSelectedAsync();
         listPanel.Controls.Add(_tableList);
 
-        _grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = true };
-        _grid.StyleAsDataGrid();
-        _grid.ColumnHeaderMouseClick += (_, e) => SortByColumnIndex(e.ColumnIndex);
-        _grid.DataBindingComplete += (_, _) => HideComplexColumns();
+        _grid = new SfDataGrid { Dock = DockStyle.Fill, AutoGenerateColumns = true };
+        _grid.StyleAsSfDataGrid();
+        // AutoGenerateColumns builds a column for every public property,
+        // navigation properties included — those come back null or an empty
+        // collection from a plain GetAllAsync() (nothing here calls
+        // .Include), so instead of a column full of blanks or
+        // "System.Collections.Generic.List`1[...]" text, this hides
+        // anything that isn't a plain scalar value. Driven by the column's
+        // ColumnMemberType, so it's still one generic rule applied the same
+        // way to every table, not a per-entity list. Sorting is native
+        // (AllowSorting, set in StyleAsSfDataGrid) — no hand-rolled
+        // reflection sort needed the way DataGridView required.
+        // e.Column.ColumnMemberType is still null at this point in the
+        // auto-generation pipeline (confirmed by inspection — not just an
+        // assumption), so the property type has to come from the bound
+        // row type itself instead, via the list's own generic argument
+        // (works even when the table is empty, unlike inferring it from row 0).
+        _grid.AutoGeneratingColumn += (_, e) =>
+        {
+            var elementType = _currentRows.GetType().GetGenericArguments().FirstOrDefault();
+            var propertyType = elementType?.GetProperty(e.Column.MappingName)?.PropertyType;
+            e.Column.Visible = IsSimpleType(propertyType);
+        };
 
         _rowCountLabel = new Label
         {
@@ -148,27 +166,17 @@ public class DatabaseExplorerControl : UserControl
         if (_tableList.SelectedItem is not string tableName || !_loaders.TryGetValue(tableName, out var loader))
             return;
 
-        _sortProperty = null;
         _currentRows = await loader();
+
+        // Switching tables (or navigating away) disposes/replaces state
+        // while the loader above is still in flight — SfDataGrid throws on
+        // a DataSource assignment after disposal, so this guard is load-bearing.
+        if (IsDisposed)
+            return;
 
         _grid.DataSource = null;
         _grid.DataSource = _currentRows;
         _rowCountLabel.Text = $"{_currentRows.Count} row{(_currentRows.Count == 1 ? "" : "s")}";
-    }
-
-    /// <summary>
-    /// AutoGenerateColumns builds a column for every public property,
-    /// navigation properties included — those come back null or an empty
-    /// collection from a plain GetAllAsync() (nothing here calls .Include),
-    /// so instead of a column full of blanks or "System.Collections.Generic
-    /// .List`1[...]" text, this hides anything that isn't a plain scalar
-    /// value. Driven by the column's ValueType, so it's still one generic
-    /// rule applied the same way to every table, not a per-entity list.
-    /// </summary>
-    private void HideComplexColumns()
-    {
-        foreach (DataGridViewColumn column in _grid.Columns)
-            column.Visible = IsSimpleType(column.ValueType);
     }
 
     private static bool IsSimpleType(Type? type)
@@ -180,52 +188,5 @@ public class DatabaseExplorerControl : UserControl
         return underlying.IsPrimitive || underlying.IsEnum
             || underlying == typeof(string) || underlying == typeof(decimal)
             || underlying == typeof(DateTime) || underlying == typeof(Guid);
-    }
-
-    private void SortByColumnIndex(int columnIndex)
-    {
-        if (_currentRows.Count == 0)
-            return;
-
-        var propertyName = _grid.Columns[columnIndex].DataPropertyName;
-        var elementType = _currentRows[0]!.GetType();
-        var property = elementType.GetProperty(propertyName);
-        if (property is null)
-            return;
-
-        _sortAscending = _sortProperty == propertyName ? !_sortAscending : true;
-        _sortProperty = propertyName;
-
-        var sorted = _currentRows.Cast<object>()
-            .OrderBy(item => property.GetValue(item), Comparer<object?>.Create(CompareForSort))
-            .ToList();
-        if (!_sortAscending)
-            sorted.Reverse();
-
-        // Rebuild as a concretely-typed List<T> (via reflection on the
-        // element type) rather than handing DataGridView a List<object> —
-        // AutoGenerateColumns reads the bound list's declared element type,
-        // and List<object> would make every column show up as "object".
-        var typedList = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(elementType))!;
-        foreach (var item in sorted)
-            typedList.Add(item);
-
-        _currentRows = typedList;
-        _grid.DataSource = null;
-        _grid.DataSource = _currentRows;
-    }
-
-    private static int CompareForSort(object? a, object? b)
-    {
-        if (a is null && b is null)
-            return 0;
-        if (a is null)
-            return -1;
-        if (b is null)
-            return 1;
-
-        return a is IComparable comparable
-            ? comparable.CompareTo(b)
-            : string.Compare(a.ToString(), b.ToString(), StringComparison.Ordinal);
     }
 }

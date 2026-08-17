@@ -2,14 +2,17 @@ using DartERP.Application.Services;
 using DartERP.Core.Models;
 using DartERP.WinForms.Local;
 using DartERP.WinForms.Styling;
+using Syncfusion.WinForms.DataGrid;
 
 namespace DartERP.WinForms.Controls;
 
 public class InventoryControl : UserControl
 {
+    private record InventoryRow(string SKU, string ProductName, string Category, string QuantityOnHand, string ReorderLevel, string Value, string Serialized, string StockStatus, bool LowStock);
+
     private readonly InventoryService _service;
     private readonly FlowLayoutPanel _kpiPanel;
-    private readonly DataGridView _grid;
+    private readonly SfDataGrid _grid;
     private readonly Panel _gridHost;
     private EmptyStateControl? _emptyState;
 
@@ -43,8 +46,8 @@ public class InventoryControl : UserControl
         titleBar.Controls.Add(sectionLabel);
         titleBar.Controls.Add(exportButton);
 
-        _grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = false };
-        _grid.StyleAsDataGrid();
+        _grid = new SfDataGrid { Dock = DockStyle.Fill, AutoGenerateColumns = false };
+        _grid.StyleAsSfDataGrid();
         BuildColumns();
 
         _gridHost = new Panel { Dock = DockStyle.Fill, BackColor = Theme.CardBackground };
@@ -60,54 +63,44 @@ public class InventoryControl : UserControl
 
     private void BuildColumns()
     {
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "SKU", HeaderText = "SKU", DataPropertyName = "SKU", FillWeight = 90 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "ProductName", HeaderText = "Product", DataPropertyName = "ProductName", FillWeight = 170 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Category", HeaderText = "Category", FillWeight = 110 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "QuantityOnHand", HeaderText = "Qty On Hand", DataPropertyName = "QuantityOnHand", FillWeight = 90, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight } });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "ReorderLevel", HeaderText = "Reorder Level", DataPropertyName = "ReorderLevel", FillWeight = 100, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight } });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Value", HeaderText = "Inventory Value", FillWeight = 110, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight } });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Serialized", HeaderText = "Serialized", FillWeight = 80 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "StockStatus", HeaderText = "Stock Status", FillWeight = 100 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "SKU", HeaderText = "SKU", Width = 90 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "ProductName", HeaderText = "Product", Width = 170 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Category", HeaderText = "Category", Width = 110 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "QuantityOnHand", HeaderText = "Qty On Hand", Width = 90 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "ReorderLevel", HeaderText = "Reorder Level", Width = 100 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Value", HeaderText = "Inventory Value", Width = 110 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Serialized", HeaderText = "Serialized", Width = 80 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "StockStatus", HeaderText = "Stock Status", Width = 100 });
 
-        _grid.CellFormatting += (_, e) =>
+        _grid.QueryCellStyle += (_, e) =>
         {
-            if (e.RowIndex < 0)
+            if (e.Column.MappingName != "StockStatus" || e.DataRow.RowData is not InventoryRow row)
                 return;
 
-            var product = (Product)_grid.Rows[e.RowIndex].DataBoundItem;
-            var columnName = _grid.Columns[e.ColumnIndex].Name;
-            var lowStock = product.QuantityOnHand <= product.ReorderLevel;
+            e.Style.TextColor = row.LowStock ? Theme.WarningAmber : Theme.SuccessGreen;
+            e.Style.Font.Bold = true;
+        };
 
-            switch (columnName)
-            {
-                case "Category":
-                    e.Value = EnumDisplay.For(product.Category);
-                    e.FormattingApplied = true;
-                    break;
-                case "Value":
-                    e.Value = (product.UnitCost * product.QuantityOnHand).ToString("C2");
-                    e.FormattingApplied = true;
-                    break;
-                case "Serialized":
-                    e.Value = product.IsSerialized ? "Yes" : "No";
-                    e.FormattingApplied = true;
-                    break;
-                case "StockStatus" when e.CellStyle is not null:
-                    e.Value = lowStock ? "Below Reorder" : "OK";
-                    e.CellStyle.ForeColor = lowStock ? Theme.WarningAmber : Theme.SuccessGreen;
-                    e.CellStyle.Font = Theme.FontBodyBold;
-                    e.FormattingApplied = true;
-                    break;
-            }
-
-            if (lowStock && e.CellStyle is not null)
-                e.CellStyle.BackColor = Theme.WarningTint;
+        // Tints the whole row, not just the StockStatus cell — same effect
+        // the old CellFormatting had by setting CellStyle.BackColor on every
+        // column. Runs after StyleAsSfDataGrid's alternating-row handler, so
+        // this BackColor wins for rows that are both alternating AND low stock.
+        _grid.QueryRowStyle += (_, e) =>
+        {
+            if (e.RowData is InventoryRow { LowStock: true })
+                e.Style.BackColor = Theme.WarningTint;
         };
     }
 
     private async Task RefreshAsync()
     {
         var summary = await _service.GetSummaryAsync();
+
+        // Navigating away disposes this control while the query above is
+        // still in flight — SfDataGrid throws on a DataSource assignment
+        // after disposal (DataGridView never did), so this guard is load-bearing.
+        if (IsDisposed)
+            return;
 
         _kpiPanel.Controls.Clear();
         _kpiPanel.Controls.Add(new KpiCard("Inventory Value", summary.TotalInventoryValue.ToString("C0")) { AccentColor = Theme.AccentPrimary });
@@ -119,6 +112,9 @@ public class InventoryControl : UserControl
         });
 
         var products = await _service.GetActiveProductsAsync();
+
+        if (IsDisposed)
+            return;
 
         if (products.Count == 0)
         {
@@ -132,7 +128,14 @@ public class InventoryControl : UserControl
             if (_emptyState is not null)
                 _gridHost.Controls.Remove(_emptyState);
             _grid.Visible = true;
-            _grid.DataSource = products.OrderBy(p => p.QuantityOnHand - p.ReorderLevel).ToList();
+            _grid.DataSource = products.OrderBy(p => p.QuantityOnHand - p.ReorderLevel).Select(p =>
+            {
+                var lowStock = p.QuantityOnHand <= p.ReorderLevel;
+                return new InventoryRow(
+                    p.SKU, p.ProductName, EnumDisplay.For(p.Category), p.QuantityOnHand.ToString(), p.ReorderLevel.ToString(),
+                    (p.UnitCost * p.QuantityOnHand).ToString("C2"), p.IsSerialized ? "Yes" : "No",
+                    lowStock ? "Below Reorder" : "OK", lowStock);
+            }).ToList();
         }
     }
 }

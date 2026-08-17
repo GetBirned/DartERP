@@ -22,7 +22,7 @@ Quick-reference talking points. Not meant to be read top to bottom — skim befo
 ## WinForms specifics worth mentioning
 
 - Custom-drawn `NavButton` and `StatusBadge` controls (owner-drawn `Panel`/`Label` subclasses with `OnPaint` overrides) rather than default WinForms chrome, for a look closer to a real enterprise app
-- The purchase order line grid is an **unbound** `DataGridView` — rows added/removed imperatively, not through `AllowUserToAddRows`, with `CellValueChanged`/`CellEndEdit` driving live total recalculation
+- The purchase order line grid is a Syncfusion `SfDataGrid` bound to a `BindingList<PurchaseOrderLineRow>` — the row type implements `INotifyPropertyChanged`, so editing Quantity or Unit Cost through the grid recomputes Line Total and the footer total automatically instead of needing a `CellValueChanged` handler to drive it by hand
 - Real bug I hit and fixed: `ComboBox.SelectedValue`/`SelectedItem` silently no-op when set in a form's constructor, before the native handle exists — they fall back to the first bound item with no exception. Fixed by deferring the data-load to the form's `Load` event. Hit this in four different edit-existing-record dialogs before tracing it to the root cause; good example of a class of WinForms timing bug that's easy to miss because it fails silently rather than throwing.
 
 ## Authentication
@@ -34,16 +34,25 @@ Quick-reference talking points. Not meant to be read top to bottom — skim befo
 
 ## Charts
 
-- Two hand-drawn GDI+ charts on the Dashboard (`Controls/PieChart.cs`, `Controls/BarChart.cs`) rather than a charting library — the built-in `DataVisualization.Charting` looks dated, and something like LiveCharts2 means fighting a third-party theming API to hit the exact `#D4C6A6` brand tan. Two chart types was a small, contained amount of custom drawing given `StatusBadge`/`KpiCard` already do GDI+ card/pill rendering, and it gets pixel-exact color control for free.
-- `PieChart` reuses `StatusColors.For(PurchaseOrderStatus)` — the same status→color mapping every grid's status column already uses — so the donut's colors mean the same thing everywhere else in the app, not a chart-only palette invented on the spot.
-- Both charts and `DashboardListCard` share one `DashboardCard` base class (title bar + rounded card chrome) — extracted once three controls wanted the literal same `OnPaint` override, not planned in ahead of time.
+- Both Dashboard charts run on Syncfusion's `ChartControl` (`Controls/SfPieChartCard.cs`, `Controls/SfBarChartCard.cs`) rather than a hand-drawn GDI+ donut/bar pair — see the Syncfusion section below for why.
+- The pie card colors each slice via `ChartSeries.Styles[i].Interior` using `StatusColors.For(PurchaseOrderStatus)` — the same status→color mapping every grid's status column already uses — so the donut's colors mean the same thing everywhere else in the app, not a chart-only palette invented on the spot.
+- Both chart cards and `DashboardListCard` share one `DashboardCard` base class (title bar + rounded card chrome), with the `ChartControl` just docked into `DashboardCard`'s `Body` panel like any other content.
 - New aggregation queries backing the charts (`IPurchaseOrderRepository.GetCountsByStatusAsync`, `IProductRepository.GetInventoryValueByCategoryAsync`) are plain EF Core `GroupBy` + `ToDictionaryAsync`, following the same "repository owns the query, service just calls it" split as everything else in `DashboardService`.
+
+## Syncfusion
+
+- Every grid and chart in the app runs on Syncfusion's WinForms suite (`Syncfusion.SfDataGrid.WinForms`, `Syncfusion.Chart.Windows`) — added specifically because my interview listing calls out "experience with tools such as Syncfusion (or similar)" as a plus, and I wanted real usage, not a token integration in one corner
+- Styled by hand from `Theme.cs` (`StyleAsSfDataGrid` in `ControlStyleExtensions`) rather than one of Syncfusion's prebuilt visual themes — a prebuilt theme means another package and a color scheme that won't match this app's tan-and-black brand
+- Real gotcha: `SfDataGrid`'s `Style.CellStyle.BackColor` alone doesn't paint anything — cells are actually colored through the `QueryCellStyle` event, and `CellStyleInfo` has a separate `Interior` brush that has to be set alongside `BackColor` for the fill to actually show. Same split exists on the chart side (`ChartStyleInfo.Interior`).
+- Real gotcha: `CellButtonClickEventArgs.Record` and `CellComboBoxSelectionChangedEventArgs.Record` are, despite the name, the grid's internal `DataRowBase` wrapper, not the bound object — the actual row is one level down, on `.RowData`. A naive `e.Record is MyRowType` cast just silently fails on every click with no exception, which is what made this one worth tracking down instead of assuming the feature simply didn't work.
+- Real gotcha: navigating away from a screen mid-query (e.g. clicking a different nav item before a search finishes) disposes the control while its `async Task RefreshAsync()` continuation is still pending. `DataGridView` tolerated a `DataSource` assignment after disposal; `SfDataGrid` throws `ArgumentNullException` from deep inside its own `RefreshViewAndContainer`. Fixed with an `IsDisposed` guard right after every `await` that's followed by a grid touch — an existing race that Syncfusion's stricter disposal behavior turned into a real, reproducible crash.
+- License key lives in a gitignored `appsettings.local.json`, never in source control since this repo is public; registered once at startup in `Program.cs` via `Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense`, optional at runtime so a missing key falls back to an unlicensed-trial dialog instead of failing to start
 
 ## Database Explorer
 
-- The one screen that deliberately breaks the app's own conventions: every other grid hand-curates its columns and goes through `Application.Services`; this one binds straight to a repository's raw `GetAllAsync()` and lets `DataGridView.AutoGenerateColumns` build columns via reflection, because the whole point is showing the actual schema, not another curated business view of it
-- Navigation/collection properties (`Product.WorkOrders`, `PurchaseOrder.Vendor`, etc.) get hidden after binding by checking each auto-generated column's `ValueType` against a short list of scalar types — one generic rule, not per-entity column lists, so it stays "zero new code per table"
-- `List<T>` doesn't support click-to-sort out of the box the way a `BindingList<T>` or `DataView` would; sorting is done by hand off `ColumnHeaderMouseClick` — reflect on the clicked column's `DataPropertyName`, sort the current rows, rebuild a concretely-typed `List<T>` (via `MakeGenericType`) so `AutoGenerateColumns` doesn't just show every column as "object", and rebind
+- The one screen that deliberately breaks the app's own conventions: every other grid hand-curates its columns and goes through `Application.Services`; this one binds straight to a repository's raw `GetAllAsync()` and lets `SfDataGrid.AutoGenerateColumns` build columns via reflection, because the whole point is showing the actual schema, not another curated business view of it
+- Navigation/collection properties (`Product.WorkOrders`, `PurchaseOrder.Vendor`, etc.) get hidden in the `AutoGeneratingColumn` event by checking each column's underlying CLR property type against a short list of scalar types — one generic rule, not per-entity column lists, so it stays "zero new code per table". Real gotcha: `AutoGeneratingColumnArgs.Column.ColumnMemberType` is still `null` at the point this event fires, so the type has to come from reflecting the bound list's own generic argument instead (`_currentRows.GetType().GetGenericArguments()[0]`), not from the column itself.
+- Sorting is native (`SfDataGrid.AllowSorting`) — the hand-rolled reflection-based sort this screen used to need with a plain `DataGridView`-bound `List<T>` (rebuild a concretely-typed list via `MakeGenericType` on every column-header click) is gone entirely now that the grid handles it.
 
 ## Audit trail on status transitions
 

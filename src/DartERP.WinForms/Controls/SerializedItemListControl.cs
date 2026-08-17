@@ -3,15 +3,18 @@ using DartERP.Core.Models;
 using DartERP.WinForms.Forms;
 using DartERP.WinForms.Local;
 using DartERP.WinForms.Styling;
+using Syncfusion.WinForms.DataGrid;
 
 namespace DartERP.WinForms.Controls;
 
 public class SerializedItemListControl : UserControl
 {
+    private record SerializedItemRow(SerializedItem Source, string SerialNumber, string Product, string WorkOrder, string CreatedDate, string Status, Color StatusColor);
+
     private readonly SerializedItemService _service;
     private readonly WorkOrderService _workOrderService;
     private readonly TextBox _searchBox;
-    private readonly DataGridView _grid;
+    private readonly SfDataGrid _grid;
     private readonly Panel _gridHost;
     private EmptyStateControl? _emptyState;
     private List<SerializedItem> _allItems = [];
@@ -38,13 +41,13 @@ public class SerializedItemListControl : UserControl
         toolbar.Controls.Add(exportButton);
         toolbar.Controls.Add(newButton);
 
-        _grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = false };
-        _grid.StyleAsDataGrid();
+        _grid = new SfDataGrid { Dock = DockStyle.Fill, AutoGenerateColumns = false };
+        _grid.StyleAsSfDataGrid();
         BuildColumns();
         _grid.CellDoubleClick += async (_, e) =>
         {
-            if (e.RowIndex >= 0)
-                await OpenEditorAsync((SerializedItem)_grid.Rows[e.RowIndex].DataBoundItem);
+            if (e.DataRow.RowData is SerializedItemRow row)
+                await OpenEditorAsync(row.Source);
         };
 
         _gridHost = new Panel { Dock = DockStyle.Fill, BackColor = Theme.CardBackground };
@@ -59,47 +62,32 @@ public class SerializedItemListControl : UserControl
 
     private void BuildColumns()
     {
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "SerialNumber", HeaderText = "Serial Number", DataPropertyName = "SerialNumber", FillWeight = 150 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Product", HeaderText = "Product", FillWeight = 160 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "WorkOrder", HeaderText = "Work Order", FillWeight = 100 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "CreatedDate", HeaderText = "Created", FillWeight = 100 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Status", HeaderText = "Status", FillWeight = 100 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "SerialNumber", HeaderText = "Serial Number", Width = 150 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Product", HeaderText = "Product", Width = 160 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "WorkOrder", HeaderText = "Work Order", Width = 100 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "CreatedDate", HeaderText = "Created", Width = 100 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Status", HeaderText = "Status", Width = 100 });
 
-        _grid.CellFormatting += (_, e) =>
+        _grid.QueryCellStyle += (_, e) =>
         {
-            if (e.RowIndex < 0)
+            if (e.Column.MappingName != "Status" || e.DataRow.RowData is not SerializedItemRow row)
                 return;
 
-            var item = (SerializedItem)_grid.Rows[e.RowIndex].DataBoundItem;
-            var columnName = _grid.Columns[e.ColumnIndex].Name;
-
-            switch (columnName)
-            {
-                case "Product":
-                    e.Value = item.Product?.ProductName ?? string.Empty;
-                    e.FormattingApplied = true;
-                    break;
-                case "WorkOrder":
-                    e.Value = item.WorkOrder?.WorkOrderNumber ?? string.Empty;
-                    e.FormattingApplied = true;
-                    break;
-                case "CreatedDate":
-                    e.Value = item.CreatedDate.ToString("MM/dd/yyyy");
-                    e.FormattingApplied = true;
-                    break;
-                case "Status" when e.CellStyle is not null:
-                    e.Value = EnumDisplay.For(item.Status);
-                    e.CellStyle.ForeColor = StatusColors.For(item.Status);
-                    e.CellStyle.Font = Theme.FontBodyBold;
-                    e.FormattingApplied = true;
-                    break;
-            }
+            e.Style.TextColor = row.StatusColor;
+            e.Style.Font.Bold = true;
         };
     }
 
     private async Task RefreshAsync()
     {
         _allItems = await _service.GetAllWithDetailsAsync();
+
+        // Navigating away disposes this control while the query above is
+        // still in flight — SfDataGrid throws on a DataSource assignment
+        // after disposal (DataGridView never did), so this guard is load-bearing.
+        if (IsDisposed)
+            return;
+
         ApplyFilter();
     }
 
@@ -125,7 +113,9 @@ public class SerializedItemListControl : UserControl
             if (_emptyState is not null)
                 _gridHost.Controls.Remove(_emptyState);
             _grid.Visible = true;
-            _grid.DataSource = filtered;
+            _grid.DataSource = filtered.Select(i => new SerializedItemRow(
+                i, i.SerialNumber, i.Product?.ProductName ?? string.Empty, i.WorkOrder?.WorkOrderNumber ?? string.Empty,
+                i.CreatedDate.ToString("MM/dd/yyyy"), EnumDisplay.For(i.Status), StatusColors.For(i.Status))).ToList();
         }
     }
 

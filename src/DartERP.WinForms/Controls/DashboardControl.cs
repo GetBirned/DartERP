@@ -13,8 +13,8 @@ public class DashboardControl : UserControl
     private readonly DashboardListCard _belowReorderCard;
     private readonly DashboardListCard _dueSoonCard;
     private readonly DashboardListCard _pendingInspectionsCard;
-    private readonly PieChart _purchaseOrdersByStatusChart;
-    private readonly BarChart _inventoryValueByCategoryChart;
+    private readonly SfPieChartCard _purchaseOrdersByStatusChart;
+    private readonly SfBarChartCard _inventoryValueByCategoryChart;
 
     public DashboardControl(DashboardService service)
     {
@@ -48,8 +48,8 @@ public class DashboardControl : UserControl
         _belowReorderCard = new DashboardListCard("Products Below Reorder Level", "All products are above their reorder level.");
         _dueSoonCard = new DashboardListCard("Work Orders Due Soon", "Nothing due in the next 7 days.");
         _pendingInspectionsCard = new DashboardListCard("Pending Quality Inspections", "No inspections awaiting a result.");
-        _purchaseOrdersByStatusChart = new PieChart("Purchase Orders by Status");
-        _inventoryValueByCategoryChart = new BarChart("Inventory Value by Category", v => v.ToString("C0"));
+        _purchaseOrdersByStatusChart = new SfPieChartCard("Purchase Orders by Status");
+        _inventoryValueByCategoryChart = new SfBarChartCard("Inventory Value by Category", "C0");
 
         _cardsPanel.Controls.Add(_recentPurchaseOrdersCard, 0, 0);
         _cardsPanel.Controls.Add(_belowReorderCard, 1, 0);
@@ -68,6 +68,13 @@ public class DashboardControl : UserControl
     private async Task RefreshAsync()
     {
         var summary = await _service.GetSummaryAsync();
+
+        // Navigating away disposes this control while the query above is
+        // still in flight — SfDataGrid/ChartControl throw on a disposed
+        // access (DataGridView and the old GDI+ charts never did), so this
+        // guard is load-bearing.
+        if (IsDisposed)
+            return;
 
         _kpiPanel.Controls.Clear();
         _kpiPanel.Controls.Add(new KpiCard("Active Customers", summary.ActiveCustomers.ToString()) { AccentColor = Theme.AccentPrimary });

@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using DartERP.Application.Services;
 using DartERP.Application.Validation;
 using DartERP.Core.DTOs;
@@ -6,27 +7,65 @@ using DartERP.Core.Models;
 using DartERP.WinForms.Controls;
 using DartERP.WinForms.Local;
 using DartERP.WinForms.Styling;
+using Syncfusion.WinForms.DataGrid;
 
 namespace DartERP.WinForms.Forms;
 
 public class PurchaseOrderEditForm : Form
 {
-    private const int ProductColumnIndex = 0;
-    private const int QuantityColumnIndex = 1;
-    private const int UnitCostColumnIndex = 2;
-    private const int LineTotalColumnIndex = 3;
-    private const int RemoveColumnIndex = 4;
+    // SfDataGrid binds the line-items grid to this instead of raw
+    // DataGridViewRow cell access. INotifyPropertyChanged is what makes the
+    // Line Total column (and the footer total, via _lines.ListChanged)
+    // update itself the moment Quantity or UnitCost changes in the grid —
+    // BindingList<T> auto-subscribes to PropertyChanged on every item it
+    // holds when T implements the interface.
+    private sealed class PurchaseOrderLineRow : INotifyPropertyChanged
+    {
+        private int _productId;
+        private int _quantity;
+        private decimal _unitCost;
+
+        public int ProductId
+        {
+            get => _productId;
+            set { _productId = value; OnPropertyChanged(nameof(ProductId)); }
+        }
+
+        public int Quantity
+        {
+            get => _quantity;
+            set { _quantity = value; OnPropertyChanged(nameof(Quantity)); OnPropertyChanged(nameof(LineTotal)); }
+        }
+
+        public decimal UnitCost
+        {
+            get => _unitCost;
+            set { _unitCost = value; OnPropertyChanged(nameof(UnitCost)); OnPropertyChanged(nameof(LineTotal)); }
+        }
+
+        public decimal LineTotal => Quantity * UnitCost;
+
+        // GridButtonColumn.MappingName still has to resolve to a real
+        // property — without one, the grid never establishes the row
+        // binding for that column, and CellButtonClick silently never fires.
+        public string Remove => string.Empty;
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        private void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
 
     private readonly PurchaseOrderService _service;
     private readonly List<Vendor> _activeVendors;
     private readonly List<Product> _activeProducts;
     private readonly PurchaseOrder? _existing;
+    private readonly BindingList<PurchaseOrderLineRow> _lines = [];
 
     private readonly ComboBox _vendorBox = new ComboBox().StyleAsInput();
     private readonly DateTimePicker _expectedDatePicker = new() { Font = Theme.FontBody, Format = DateTimePickerFormat.Short };
     private readonly ComboBox _statusBox = new ComboBox().StyleAsInput();
     private readonly TextBox _notesBox = new TextBox().StyleAsInput();
-    private readonly DataGridView _linesGrid;
+    private readonly SfDataGrid _linesGrid;
     private readonly LetterSpacedLabel _totalLabel;
     private readonly Label _errorLabel;
     private readonly DashboardListCard _historyCard;
@@ -171,101 +210,88 @@ public class PurchaseOrderEditForm : Form
         return panel;
     }
 
-    private DataGridView BuildLinesGrid()
+    private SfDataGrid BuildLinesGrid()
     {
-        var grid = new DataGridView
+        var grid = new SfDataGrid
         {
             Dock = DockStyle.Fill,
-            AllowUserToAddRows = false,
             AutoGenerateColumns = false,
         };
-        grid.StyleAsDataGrid();
-        grid.ReadOnly = false;
-        grid.EditMode = DataGridViewEditMode.EditOnKeystrokeOrF2;
+        grid.StyleAsSfDataGrid();
+        grid.AllowEditing = true;
 
-        var productColumn = new DataGridViewComboBoxColumn
+        grid.Columns.Add(new GridComboBoxColumn
         {
-            Name = "Product",
+            MappingName = "ProductId",
             HeaderText = "Product",
             DataSource = _activeProducts,
             DisplayMember = "ProductName",
             ValueMember = "ProductId",
-            FillWeight = 220,
-            FlatStyle = FlatStyle.Flat,
-        };
-        grid.Columns.Add(productColumn);
+            Width = 220,
+        });
 
-        grid.Columns.Add(new DataGridViewTextBoxColumn
+        grid.Columns.Add(new GridNumericColumn
         {
-            Name = "Quantity",
+            MappingName = "Quantity",
             HeaderText = "Quantity",
-            FillWeight = 90,
-            DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight },
+            Width = 90,
+            NumberFormatInfo = new System.Globalization.NumberFormatInfo { NumberDecimalDigits = 0 },
         });
 
-        grid.Columns.Add(new DataGridViewTextBoxColumn
+        grid.Columns.Add(new GridNumericColumn
         {
-            Name = "UnitCost",
+            MappingName = "UnitCost",
             HeaderText = "Unit Cost",
-            FillWeight = 100,
-            DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight },
+            Width = 100,
+            NumberFormatInfo = new System.Globalization.NumberFormatInfo { NumberDecimalDigits = 2 },
         });
 
-        grid.Columns.Add(new DataGridViewTextBoxColumn
+        grid.Columns.Add(new GridTextColumn
         {
-            Name = "LineTotal",
+            MappingName = "LineTotal",
             HeaderText = "Line Total",
-            FillWeight = 100,
-            ReadOnly = true,
-            DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight, BackColor = Theme.AppBackground },
+            Width = 100,
+            AllowEditing = false,
+            Format = "C2",
         });
 
-        grid.Columns.Add(new DataGridViewButtonColumn
+        grid.Columns.Add(new GridButtonColumn
         {
-            Name = "Remove",
-            Text = "Remove",
-            UseColumnTextForButtonValue = true,
-            FillWeight = 70,
+            MappingName = "Remove",
+            HeaderText = "Remove",
+            AllowDefaultButtonText = true,
+            DefaultButtonText = "Remove",
+            Width = 70,
         });
 
-        grid.CurrentCellDirtyStateChanged += (_, _) =>
+        // Picking a different product doesn't touch Quantity/UnitCost through
+        // the grid's own binding (ProductId is the only two-way-bound
+        // property on that column) — this is what carries over the old
+        // ApplyDefaultUnitCost behavior of defaulting the cost to the
+        // product's list price whenever the product changes.
+        grid.CellComboBoxSelectionChanged += (_, e) =>
         {
-            if (grid.IsCurrentCellDirty)
-                grid.CommitEdit(DataGridViewDataErrorContexts.Commit);
+            if (UnwrapRow(e.Record) is PurchaseOrderLineRow row && e.SelectedItem is Product product)
+                row.UnitCost = product.UnitCost;
         };
 
-        grid.CellValueChanged += (_, e) =>
+        grid.CellButtonClick += (_, e) =>
         {
-            if (e.RowIndex < 0)
-                return;
-
-            if (e.ColumnIndex == ProductColumnIndex)
-                ApplyDefaultUnitCost(e.RowIndex);
-
-            if (e.ColumnIndex is ProductColumnIndex or QuantityColumnIndex or UnitCostColumnIndex)
-                RecalculateLine(e.RowIndex);
+            if (UnwrapRow(e.Record) is PurchaseOrderLineRow row)
+                _lines.Remove(row);
         };
 
-        grid.CellEndEdit += (_, e) =>
-        {
-            if (e.RowIndex < 0)
-                return;
-
-            if (e.ColumnIndex is QuantityColumnIndex or UnitCostColumnIndex)
-                RecalculateLine(e.RowIndex);
-        };
-
-        grid.CellClick += (_, e) =>
-        {
-            if (e.RowIndex >= 0 && e.ColumnIndex == RemoveColumnIndex)
-            {
-                grid.Rows.RemoveAt(e.RowIndex);
-                RecalculateTotal();
-            }
-        };
+        _lines.ListChanged += (_, _) => RecalculateTotal();
+        grid.DataSource = _lines;
 
         return grid;
     }
+
+    // CellButtonClickEventArgs.Record and CellComboBoxSelectionChangedEventArgs.Record
+    // are, despite the name, the grid's internal DataRow wrapper rather than the bound
+    // object itself — the actual row is one level down, on DataRowBase.RowData.
+    private static object? UnwrapRow(object? record) =>
+        record is Syncfusion.WinForms.DataGrid.DataRowBase dataRow ? dataRow.RowData : record;
 
     private Panel BuildFooterPanel(out LetterSpacedLabel totalLabel, out Label errorLabel)
     {
@@ -373,59 +399,27 @@ public class PurchaseOrderEditForm : Form
 
     private void AddLine(int productId, int quantity, decimal unitCost)
     {
-        var rowIndex = _linesGrid.Rows.Add();
-        var row = _linesGrid.Rows[rowIndex];
-        row.Cells[ProductColumnIndex].Value = productId > 0 ? productId : (_activeProducts.FirstOrDefault()?.ProductId ?? 0);
-        row.Cells[QuantityColumnIndex].Value = quantity;
-        row.Cells[UnitCostColumnIndex].Value = unitCost.ToString("N2");
-        row.Cells[LineTotalColumnIndex].Value = (quantity * unitCost).ToString("C2");
-        RecalculateTotal();
-    }
-
-    private void ApplyDefaultUnitCost(int rowIndex)
-    {
-        var row = _linesGrid.Rows[rowIndex];
-        if (row.Cells[ProductColumnIndex].Value is not int productId)
-            return;
-
-        var product = _activeProducts.FirstOrDefault(p => p.ProductId == productId);
-        if (product is not null)
-            row.Cells[UnitCostColumnIndex].Value = product.UnitCost.ToString("N2");
-    }
-
-    private void RecalculateLine(int rowIndex)
-    {
-        var row = _linesGrid.Rows[rowIndex];
-        var quantity = ParseInt(row.Cells[QuantityColumnIndex].Value);
-        var unitCost = ParseDecimal(row.Cells[UnitCostColumnIndex].Value);
-        row.Cells[LineTotalColumnIndex].Value = (quantity * unitCost).ToString("C2");
-        RecalculateTotal();
+        _lines.Add(new PurchaseOrderLineRow
+        {
+            ProductId = productId > 0 ? productId : (_activeProducts.FirstOrDefault()?.ProductId ?? 0),
+            Quantity = quantity,
+            UnitCost = unitCost,
+        });
     }
 
     private void RecalculateTotal()
     {
-        decimal total = 0;
-        foreach (DataGridViewRow row in _linesGrid.Rows)
-        {
-            var quantity = ParseInt(row.Cells[QuantityColumnIndex].Value);
-            var unitCost = ParseDecimal(row.Cells[UnitCostColumnIndex].Value);
-            total += quantity * unitCost;
-        }
+        var total = _lines.Sum(r => r.LineTotal);
         _totalLabel.Text = $"Total: {total:C2}";
     }
 
-    private static int ParseInt(object? value) => int.TryParse(value?.ToString(), out var result) ? result : 0;
-
-    private static decimal ParseDecimal(object? value) => decimal.TryParse(value?.ToString(), out var result) ? result : 0m;
-
     private List<PurchaseOrderLineInput> CollectLines() =>
-        _linesGrid.Rows.Cast<DataGridViewRow>()
-            .Where(r => r.Cells[ProductColumnIndex].Value is int)
+        _lines.Where(r => r.ProductId > 0)
             .Select(r => new PurchaseOrderLineInput
             {
-                ProductId = (int)r.Cells[ProductColumnIndex].Value!,
-                Quantity = ParseInt(r.Cells[QuantityColumnIndex].Value),
-                UnitCost = ParseDecimal(r.Cells[UnitCostColumnIndex].Value),
+                ProductId = r.ProductId,
+                Quantity = r.Quantity,
+                UnitCost = r.UnitCost,
             })
             .ToList();
 

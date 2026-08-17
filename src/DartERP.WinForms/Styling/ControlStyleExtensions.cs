@@ -1,3 +1,7 @@
+using Syncfusion.WinForms.Core;
+using Syncfusion.WinForms.DataGrid;
+using Syncfusion.WinForms.DataGrid.Enums;
+
 namespace DartERP.WinForms.Styling;
 
 /// <summary>
@@ -6,6 +10,65 @@ namespace DartERP.WinForms.Styling;
 /// </summary>
 public static class ControlStyleExtensions
 {
+    /// <summary>
+    /// Hand-set to Theme.cs rather than one of Syncfusion's prebuilt themes
+    /// (Office2019, Fluent, etc.) — a prebuilt theme means another package
+    /// and a color scheme that won't match this app's tan-and-black brand.
+    /// Every screen rebuilds from scratch on a light/dark toggle (see
+    /// MainForm.RebuildShell), so a freshly-styled grid re-themes for free.
+    /// </summary>
+    public static void StyleAsSfDataGrid(this SfDataGrid grid)
+    {
+        grid.AllowEditing = false;
+        grid.AllowSorting = true;
+        grid.AllowResizingColumns = true;
+        grid.SelectionMode = GridSelectionMode.Single;
+        grid.NavigationMode = NavigationMode.Row;
+        grid.RowHeight = 34;
+        grid.HeaderRowHeight = 38;
+        grid.Font = Theme.FontBody;
+
+        grid.ThemeName = string.Empty;
+        grid.BackColor = Theme.CardBackground;
+        grid.Style.BorderStyle = System.Windows.Forms.BorderStyle.None;
+        grid.Style.BorderColor = Theme.BorderColor;
+        grid.Style.CellStyle.BackColor = Theme.CardBackground;
+        grid.Style.CellStyle.TextColor = Theme.TextPrimary;
+        grid.Style.CellStyle.Font.Facename = Theme.FontBody.Name;
+        grid.Style.CellStyle.Font.Size = Theme.FontBody.Size;
+        grid.Style.CellStyle.VerticalAlignment = System.Windows.Forms.VisualStyles.VerticalAlignment.Center;
+
+        grid.Style.HeaderStyle.BackColor = Theme.AppBackground;
+        grid.Style.HeaderStyle.TextColor = Theme.TextSecondary;
+        grid.Style.HeaderStyle.Font.Facename = Theme.FontBodyBold.Name;
+        grid.Style.HeaderStyle.Font.Size = Theme.FontBodyBold.Size;
+        grid.Style.HeaderStyle.Font.Bold = true;
+        grid.Style.HeaderStyle.VerticalAlignment = System.Windows.Forms.VisualStyles.VerticalAlignment.Center;
+
+        grid.Style.SelectionStyle.BackColor = Theme.SelectionHighlight;
+        grid.Style.SelectionStyle.TextColor = Theme.TextPrimary;
+
+        // Style.CellStyle.BackColor above sets the static default, but
+        // SfDataGrid doesn't actually paint cells with it — QueryCellStyle
+        // is what real per-cell rendering reads from, so the theme colors
+        // (and the alternating-row tint, since there's no AlternatingRowStyle
+        // property the way DataGridView had one) both have to be reasserted
+        // here. Registered before each screen's own QueryCellStyle handler
+        // (subscribed later, in BuildColumns), so a screen's column-specific
+        // logic (e.g. coloring the Status text) runs after this baseline and
+        // layers on top instead of being overwritten by it.
+        grid.QueryCellStyle += (_, e) =>
+        {
+            var background = e.RowIndex % 2 == 1 ? Theme.AlternateRowBackground : Theme.CardBackground;
+            // BackColor alone doesn't paint the cell — CellStyleInfo has a
+            // separate Interior brush (same split as ChartStyleInfo) that
+            // actually drives the fill, so both have to be set together.
+            e.Style.BackColor = background;
+            e.Style.Interior = new BrushInfo(background);
+            e.Style.TextColor = Theme.TextPrimary;
+        };
+    }
+
     public static Button StyleAsPrimaryButton(this Button button)
     {
         // Primary CTAs use the near-black brand chrome color rather than the

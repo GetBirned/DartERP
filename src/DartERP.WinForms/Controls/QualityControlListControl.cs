@@ -3,14 +3,17 @@ using DartERP.Core.Models;
 using DartERP.WinForms.Forms;
 using DartERP.WinForms.Local;
 using DartERP.WinForms.Styling;
+using Syncfusion.WinForms.DataGrid;
 
 namespace DartERP.WinForms.Controls;
 
 public class QualityControlListControl : UserControl
 {
+    private record QualityInspectionRow(QualityInspection Source, string SerialNumber, string Product, string InspectionDate, string Inspector, string Result, Color ResultColor);
+
     private readonly QualityInspectionService _service;
     private readonly SerializedItemService _serializedItemService;
-    private readonly DataGridView _grid;
+    private readonly SfDataGrid _grid;
     private readonly Panel _gridHost;
     private EmptyStateControl? _emptyState;
 
@@ -42,13 +45,13 @@ public class QualityControlListControl : UserControl
         toolbar.Controls.Add(exportButton);
         toolbar.Controls.Add(newButton);
 
-        _grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = false };
-        _grid.StyleAsDataGrid();
+        _grid = new SfDataGrid { Dock = DockStyle.Fill, AutoGenerateColumns = false };
+        _grid.StyleAsSfDataGrid();
         BuildColumns();
         _grid.CellDoubleClick += async (_, e) =>
         {
-            if (e.RowIndex >= 0)
-                await OpenEditorAsync((QualityInspection)_grid.Rows[e.RowIndex].DataBoundItem);
+            if (e.DataRow.RowData is QualityInspectionRow row)
+                await OpenEditorAsync(row.Source);
         };
 
         _gridHost = new Panel { Dock = DockStyle.Fill, BackColor = Theme.CardBackground };
@@ -63,47 +66,31 @@ public class QualityControlListControl : UserControl
 
     private void BuildColumns()
     {
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "SerialNumber", HeaderText = "Serial Number", FillWeight = 150 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Product", HeaderText = "Product", FillWeight = 160 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "InspectionDate", HeaderText = "Inspection Date", FillWeight = 110 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Inspector", HeaderText = "Inspector", DataPropertyName = "Inspector", FillWeight = 120 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Result", HeaderText = "Result", FillWeight = 90 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "SerialNumber", HeaderText = "Serial Number", Width = 150 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Product", HeaderText = "Product", Width = 160 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "InspectionDate", HeaderText = "Inspection Date", Width = 110 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Inspector", HeaderText = "Inspector", Width = 120 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Result", HeaderText = "Result", Width = 90 });
 
-        _grid.CellFormatting += (_, e) =>
+        _grid.QueryCellStyle += (_, e) =>
         {
-            if (e.RowIndex < 0)
+            if (e.Column.MappingName != "Result" || e.DataRow.RowData is not QualityInspectionRow row)
                 return;
 
-            var inspection = (QualityInspection)_grid.Rows[e.RowIndex].DataBoundItem;
-            var columnName = _grid.Columns[e.ColumnIndex].Name;
-
-            switch (columnName)
-            {
-                case "SerialNumber":
-                    e.Value = inspection.SerializedItem?.SerialNumber ?? string.Empty;
-                    e.FormattingApplied = true;
-                    break;
-                case "Product":
-                    e.Value = inspection.SerializedItem?.Product?.ProductName ?? string.Empty;
-                    e.FormattingApplied = true;
-                    break;
-                case "InspectionDate":
-                    e.Value = inspection.InspectionDate.ToString("MM/dd/yyyy");
-                    e.FormattingApplied = true;
-                    break;
-                case "Result" when e.CellStyle is not null:
-                    e.Value = EnumDisplay.For(inspection.Result);
-                    e.CellStyle.ForeColor = StatusColors.For(inspection.Result);
-                    e.CellStyle.Font = Theme.FontBodyBold;
-                    e.FormattingApplied = true;
-                    break;
-            }
+            e.Style.TextColor = row.ResultColor;
+            e.Style.Font.Bold = true;
         };
     }
 
     private async Task RefreshAsync()
     {
         var results = await _service.GetAllWithDetailsAsync();
+
+        // Navigating away disposes this control while the query above is
+        // still in flight — SfDataGrid throws on a DataSource assignment
+        // after disposal (DataGridView never did), so this guard is load-bearing.
+        if (IsDisposed)
+            return;
 
         if (results.Count == 0)
         {
@@ -117,7 +104,9 @@ public class QualityControlListControl : UserControl
             if (_emptyState is not null)
                 _gridHost.Controls.Remove(_emptyState);
             _grid.Visible = true;
-            _grid.DataSource = results;
+            _grid.DataSource = results.Select(i => new QualityInspectionRow(
+                i, i.SerializedItem?.SerialNumber ?? string.Empty, i.SerializedItem?.Product?.ProductName ?? string.Empty,
+                i.InspectionDate.ToString("MM/dd/yyyy"), i.Inspector, EnumDisplay.For(i.Result), StatusColors.For(i.Result))).ToList();
         }
     }
 

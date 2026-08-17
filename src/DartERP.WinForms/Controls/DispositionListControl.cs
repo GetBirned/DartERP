@@ -4,15 +4,18 @@ using DartERP.Core.Models;
 using DartERP.WinForms.Forms;
 using DartERP.WinForms.Local;
 using DartERP.WinForms.Styling;
+using Syncfusion.WinForms.DataGrid;
 
 namespace DartERP.WinForms.Controls;
 
 public class DispositionListControl : UserControl
 {
+    private record DispositionRow(string SerialNumber, string Product, string DispositionDate, string Type, string Recipient, string Notes);
+
     private readonly DispositionService _service;
     private readonly SerializedItemService _serializedItemService;
     private readonly CustomerService _customerService;
-    private readonly DataGridView _grid;
+    private readonly SfDataGrid _grid;
     private readonly Panel _gridHost;
     private EmptyStateControl? _emptyState;
 
@@ -46,8 +49,8 @@ public class DispositionListControl : UserControl
         toolbar.Controls.Add(exportButton);
         toolbar.Controls.Add(newButton);
 
-        _grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = false };
-        _grid.StyleAsDataGrid();
+        _grid = new SfDataGrid { Dock = DockStyle.Fill, AutoGenerateColumns = false };
+        _grid.StyleAsSfDataGrid();
         BuildColumns();
 
         _gridHost = new Panel { Dock = DockStyle.Fill, BackColor = Theme.CardBackground };
@@ -62,50 +65,23 @@ public class DispositionListControl : UserControl
 
     private void BuildColumns()
     {
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "SerialNumber", HeaderText = "Serial Number", FillWeight = 140 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Product", HeaderText = "Product", FillWeight = 150 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "DispositionDate", HeaderText = "Date", FillWeight = 90 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Type", HeaderText = "Type", FillWeight = 100 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Recipient", HeaderText = "Recipient", FillWeight = 170 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Notes", HeaderText = "Notes", FillWeight = 180 });
-
-        _grid.CellFormatting += (_, e) =>
-        {
-            if (e.RowIndex < 0)
-                return;
-
-            var disposition = (Disposition)_grid.Rows[e.RowIndex].DataBoundItem;
-            var columnName = _grid.Columns[e.ColumnIndex].Name;
-
-            switch (columnName)
-            {
-                case "SerialNumber":
-                    e.Value = disposition.SerializedItem?.SerialNumber ?? string.Empty;
-                    e.FormattingApplied = true;
-                    break;
-                case "Product":
-                    e.Value = disposition.SerializedItem?.Product?.ProductName ?? string.Empty;
-                    e.FormattingApplied = true;
-                    break;
-                case "DispositionDate":
-                    e.Value = disposition.DispositionDate.ToString("MM/dd/yyyy");
-                    e.FormattingApplied = true;
-                    break;
-                case "Type":
-                    e.Value = EnumDisplay.For(disposition.Type);
-                    e.FormattingApplied = true;
-                    break;
-                case "Recipient":
-                    e.Value = disposition.Customer?.CompanyName ?? "-";
-                    e.FormattingApplied = true;
-                    break;
-            }
-        };
+        _grid.Columns.Add(new GridTextColumn { MappingName = "SerialNumber", HeaderText = "Serial Number", Width = 140 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Product", HeaderText = "Product", Width = 150 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "DispositionDate", HeaderText = "Date", Width = 90 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Type", HeaderText = "Type", Width = 100 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Recipient", HeaderText = "Recipient", Width = 170 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Notes", HeaderText = "Notes", Width = 180 });
     }
 
     private async Task RefreshAsync()
     {
         var results = await _service.GetAllWithDetailsAsync();
+
+        // Navigating away disposes this control while the query above is
+        // still in flight — SfDataGrid throws on a DataSource assignment
+        // after disposal (DataGridView never did), so this guard is load-bearing.
+        if (IsDisposed)
+            return;
 
         if (results.Count == 0)
         {
@@ -119,7 +95,9 @@ public class DispositionListControl : UserControl
             if (_emptyState is not null)
                 _gridHost.Controls.Remove(_emptyState);
             _grid.Visible = true;
-            _grid.DataSource = results;
+            _grid.DataSource = results.Select(d => new DispositionRow(
+                d.SerializedItem?.SerialNumber ?? string.Empty, d.SerializedItem?.Product?.ProductName ?? string.Empty,
+                d.DispositionDate.ToString("MM/dd/yyyy"), EnumDisplay.For(d.Type), d.Customer?.CompanyName ?? "-", d.Notes)).ToList();
         }
     }
 

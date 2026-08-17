@@ -1,18 +1,20 @@
 using DartERP.Application.Services;
-using DartERP.Core.Enums;
 using DartERP.Core.Models;
 using DartERP.WinForms.Forms;
 using DartERP.WinForms.Local;
 using DartERP.WinForms.Styling;
+using Syncfusion.WinForms.DataGrid;
 
 namespace DartERP.WinForms.Controls;
 
 public class PurchaseOrderListControl : UserControl
 {
+    private record PurchaseOrderRow(PurchaseOrder Source, string PurchaseOrderNumber, string Vendor, string OrderDate, string ExpectedDate, string Status, Color StatusColor, string TotalAmount);
+
     private readonly PurchaseOrderService _service;
     private readonly VendorService _vendorService;
     private readonly ProductService _productService;
-    private readonly DataGridView _grid;
+    private readonly SfDataGrid _grid;
     private readonly Panel _gridHost;
     private EmptyStateControl? _emptyState;
 
@@ -45,13 +47,13 @@ public class PurchaseOrderListControl : UserControl
         toolbar.Controls.Add(exportButton);
         toolbar.Controls.Add(newButton);
 
-        _grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = false };
-        _grid.StyleAsDataGrid();
+        _grid = new SfDataGrid { Dock = DockStyle.Fill, AutoGenerateColumns = false };
+        _grid.StyleAsSfDataGrid();
         BuildColumns();
         _grid.CellDoubleClick += async (_, e) =>
         {
-            if (e.RowIndex >= 0)
-                await OpenEditorAsync((PurchaseOrder)_grid.Rows[e.RowIndex].DataBoundItem);
+            if (e.DataRow.RowData is PurchaseOrderRow row)
+                await OpenEditorAsync(row.Source);
         };
 
         _gridHost = new Panel { Dock = DockStyle.Fill, BackColor = Theme.CardBackground };
@@ -66,52 +68,32 @@ public class PurchaseOrderListControl : UserControl
 
     private void BuildColumns()
     {
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "PurchaseOrderNumber", HeaderText = "PO #", DataPropertyName = "PurchaseOrderNumber", FillWeight = 90 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Vendor", HeaderText = "Vendor", FillWeight = 190 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "OrderDate", HeaderText = "Order Date", FillWeight = 100 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "ExpectedDate", HeaderText = "Expected Date", FillWeight = 100 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Status", HeaderText = "Status", FillWeight = 100 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "TotalAmount", HeaderText = "Total", FillWeight = 100, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight } });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "PurchaseOrderNumber", HeaderText = "PO #", Width = 90 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Vendor", HeaderText = "Vendor", Width = 190 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "OrderDate", HeaderText = "Order Date", Width = 100 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "ExpectedDate", HeaderText = "Expected Date", Width = 100 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Status", HeaderText = "Status", Width = 100 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "TotalAmount", HeaderText = "Total", Width = 100 });
 
-        _grid.CellFormatting += (_, e) =>
+        _grid.QueryCellStyle += (_, e) =>
         {
-            if (e.RowIndex < 0)
+            if (e.Column.MappingName != "Status" || e.DataRow.RowData is not PurchaseOrderRow row)
                 return;
 
-            var po = (PurchaseOrder)_grid.Rows[e.RowIndex].DataBoundItem;
-            var columnName = _grid.Columns[e.ColumnIndex].Name;
-
-            switch (columnName)
-            {
-                case "Vendor":
-                    e.Value = po.Vendor?.CompanyName ?? string.Empty;
-                    e.FormattingApplied = true;
-                    break;
-                case "OrderDate":
-                    e.Value = po.OrderDate.ToString("MM/dd/yyyy");
-                    e.FormattingApplied = true;
-                    break;
-                case "ExpectedDate":
-                    e.Value = po.ExpectedDate?.ToString("MM/dd/yyyy") ?? "-";
-                    e.FormattingApplied = true;
-                    break;
-                case "TotalAmount":
-                    e.Value = po.TotalAmount.ToString("C2");
-                    e.FormattingApplied = true;
-                    break;
-                case "Status" when e.CellStyle is not null:
-                    e.Value = EnumDisplay.For(po.Status);
-                    e.CellStyle.ForeColor = StatusColors.For(po.Status);
-                    e.CellStyle.Font = Theme.FontBodyBold;
-                    e.FormattingApplied = true;
-                    break;
-            }
+            e.Style.TextColor = row.StatusColor;
+            e.Style.Font.Bold = true;
         };
     }
 
     private async Task RefreshAsync()
     {
         var results = await _service.GetAllWithVendorAsync();
+
+        // Navigating away disposes this control while the query above is
+        // still in flight — SfDataGrid throws on a DataSource assignment
+        // after disposal (DataGridView never did), so this guard is load-bearing.
+        if (IsDisposed)
+            return;
 
         if (results.Count == 0)
         {
@@ -125,7 +107,10 @@ public class PurchaseOrderListControl : UserControl
             if (_emptyState is not null)
                 _gridHost.Controls.Remove(_emptyState);
             _grid.Visible = true;
-            _grid.DataSource = results;
+            _grid.DataSource = results.Select(po => new PurchaseOrderRow(
+                po, po.PurchaseOrderNumber, po.Vendor?.CompanyName ?? string.Empty, po.OrderDate.ToString("MM/dd/yyyy"),
+                po.ExpectedDate?.ToString("MM/dd/yyyy") ?? "-", EnumDisplay.For(po.Status), StatusColors.For(po.Status),
+                po.TotalAmount.ToString("C2"))).ToList();
         }
     }
 

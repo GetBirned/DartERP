@@ -55,7 +55,7 @@ Validation and business rules live in `Application.Services`, not in WinForms ev
 
 ## Purchase order line editing
 
-The purchase order line grid (`PurchaseOrderEditForm`) is an unbound `DataGridView` — rows are added/removed imperatively via a "+ Add Line" button and a per-row Remove button, rather than relying on `DataGridView.AllowUserToAddRows`. Product selection auto-fills a default unit cost from the catalog (still editable), and quantity/cost edits recompute that row's line total and the order grand total immediately via `CellValueChanged`/`CellEndEdit`.
+The purchase order line grid (`PurchaseOrderEditForm`) is a Syncfusion `SfDataGrid` bound to a `BindingList<PurchaseOrderLineRow>` — rows are added/removed imperatively via a "+ Add Line" button and a per-row `GridButtonColumn` Remove button. The row type implements `INotifyPropertyChanged`, so editing Quantity or Unit Cost through the grid recomputes that row's Line Total, and the `BindingList`'s `ListChanged` event recomputes the order grand total, without a `CellValueChanged`-style handler driving either by hand. A `GridComboBoxColumn` on Product auto-fills a default unit cost from the catalog on selection (still editable) via the grid's `CellComboBoxSelectionChanged` event.
 
 ## A ComboBox binding gotcha worth documenting
 

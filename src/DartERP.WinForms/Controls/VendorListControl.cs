@@ -3,15 +3,18 @@ using DartERP.Core.Models;
 using DartERP.WinForms.Forms;
 using DartERP.WinForms.Local;
 using DartERP.WinForms.Styling;
+using Syncfusion.WinForms.DataGrid;
 
 namespace DartERP.WinForms.Controls;
 
 public class VendorListControl : UserControl
 {
+    private record VendorRow(Vendor Source, string VendorNumber, string CompanyName, string ContactName, string Email, string Phone, string VendorType, string Status);
+
     private readonly VendorService _service;
     private readonly TextBox _searchBox;
     private readonly CheckBox _activeOnlyCheck;
-    private readonly DataGridView _grid;
+    private readonly SfDataGrid _grid;
     private readonly Panel _gridHost;
     private EmptyStateControl? _emptyState;
 
@@ -49,13 +52,13 @@ public class VendorListControl : UserControl
         toolbar.Controls.Add(exportButton);
         toolbar.Controls.Add(newButton);
 
-        _grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = false };
-        _grid.StyleAsDataGrid();
+        _grid = new SfDataGrid { Dock = DockStyle.Fill, AutoGenerateColumns = false };
+        _grid.StyleAsSfDataGrid();
         BuildColumns();
         _grid.CellDoubleClick += async (_, e) =>
         {
-            if (e.RowIndex >= 0)
-                await OpenEditorAsync((Vendor)_grid.Rows[e.RowIndex].DataBoundItem);
+            if (e.DataRow.RowData is VendorRow row)
+                await OpenEditorAsync(row.Source);
         };
 
         _gridHost = new Panel { Dock = DockStyle.Fill, BackColor = Theme.CardBackground };
@@ -70,40 +73,33 @@ public class VendorListControl : UserControl
 
     private void BuildColumns()
     {
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "VendorNumber", HeaderText = "Vendor #", DataPropertyName = "VendorNumber", FillWeight = 90 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "CompanyName", HeaderText = "Company", DataPropertyName = "CompanyName", FillWeight = 170 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "ContactName", HeaderText = "Contact", DataPropertyName = "ContactName", FillWeight = 130 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Email", HeaderText = "Email", DataPropertyName = "Email", FillWeight = 170 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Phone", HeaderText = "Phone", DataPropertyName = "Phone", FillWeight = 110 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "VendorType", HeaderText = "Type", FillWeight = 110 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Status", HeaderText = "Status", FillWeight = 80 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "VendorNumber", HeaderText = "Vendor #", Width = 90 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "CompanyName", HeaderText = "Company", Width = 170 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "ContactName", HeaderText = "Contact", Width = 130 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Email", HeaderText = "Email", Width = 170 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Phone", HeaderText = "Phone", Width = 110 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "VendorType", HeaderText = "Type", Width = 110 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Status", HeaderText = "Status", Width = 80 });
 
-        _grid.CellFormatting += (_, e) =>
+        _grid.QueryCellStyle += (_, e) =>
         {
-            if (e.RowIndex < 0)
+            if (e.Column.MappingName != "Status" || e.DataRow.RowData is not VendorRow row)
                 return;
 
-            var vendor = (Vendor)_grid.Rows[e.RowIndex].DataBoundItem;
-            var columnName = _grid.Columns[e.ColumnIndex].Name;
-
-            if (columnName == "VendorType")
-            {
-                e.Value = EnumDisplay.For(vendor.VendorType);
-                e.FormattingApplied = true;
-            }
-            else if (columnName == "Status" && e.CellStyle is not null)
-            {
-                e.Value = vendor.IsActive ? "Active" : "Inactive";
-                e.CellStyle.ForeColor = vendor.IsActive ? Theme.SuccessGreen : Theme.NeutralGray;
-                e.CellStyle.Font = Theme.FontBodyBold;
-                e.FormattingApplied = true;
-            }
+            e.Style.TextColor = row.Status == "Active" ? Theme.SuccessGreen : Theme.NeutralGray;
+            e.Style.Font.Bold = true;
         };
     }
 
     private async Task RefreshAsync()
     {
         var results = await _service.SearchAsync(_searchBox.Text, _activeOnlyCheck.Checked);
+
+        // Navigating away disposes this control while the search above is
+        // still in flight — SfDataGrid throws on a DataSource assignment
+        // after disposal (DataGridView never did), so this guard is load-bearing.
+        if (IsDisposed)
+            return;
 
         if (results.Count == 0)
         {
@@ -120,7 +116,9 @@ public class VendorListControl : UserControl
             if (_emptyState is not null)
                 _gridHost.Controls.Remove(_emptyState);
             _grid.Visible = true;
-            _grid.DataSource = results;
+            _grid.DataSource = results.Select(v => new VendorRow(
+                v, v.VendorNumber, v.CompanyName, v.ContactName, v.Email, v.Phone,
+                EnumDisplay.For(v.VendorType), v.IsActive ? "Active" : "Inactive")).ToList();
         }
     }
 

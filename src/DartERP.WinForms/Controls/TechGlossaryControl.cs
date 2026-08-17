@@ -30,7 +30,7 @@ public class TechGlossaryControl : UserControl
             "WinForms",
             "UI Framework",
             "The desktop framework I chose on purpose, not by default.",
-            "I picked WinForms over a web stack because I wanted this to feel like a real internal business app, which is still how a lot of manufacturing ERP software actually ships. The catch is WinForms gives you almost nothing for free visually. No CSS, no built-in theming, no charting. So I built my own styling layer on top of it: Theme.cs defines a light and dark color palette, ControlStyleExtensions gives every button, grid, and text input consistent styling through extension methods like StyleAsPrimaryButton and StyleAsDataGrid, and hand-drawn GDI+ controls cover anything the stock toolbox couldn't do, like the dashboard's donut chart. I wasn't going to ship the default gray-button look."),
+            "I picked WinForms over a web stack because I wanted this to feel like a real internal business app, which is still how a lot of manufacturing ERP software actually ships. The catch is WinForms gives you almost nothing for free visually. No CSS, no built-in theming, no charting. So I built my own styling layer on top of it: Theme.cs defines a light and dark color palette, ControlStyleExtensions gives every button, grid, and text input consistent styling through extension methods like StyleAsPrimaryButton and StyleAsSfDataGrid, Syncfusion's SfDataGrid and ChartControl cover every grid and chart in the app, and hand-drawn GDI+ controls cover the rest, like the sidebar icons and rounded card corners. I wasn't going to ship the default gray-button look."),
         new(
             "Layered Architecture",
             "Architecture",
@@ -81,8 +81,13 @@ public class TechGlossaryControl : UserControl
         new(
             "GDI+ Custom Drawing",
             "UI Framework",
-            "No charting library, no icon library. Every visual is hand-drawn.",
-            "The dashboard's PieChart and BarChart controls, every sidebar icon in NavIconRenderer, the rounded card corners, the status badges, even the two diagrams on this exact screen, are all plain GDI+: Graphics.FillPath, DrawPath, and DrawString calls inside OnPaint overrides, not a NuGet charting package. I made that call because the built-in charting control looks dated, and a third-party charting library means fighting its own theming API just to hit this app's exact brand tan, #D4C6A6. Hand-drawing gives me pixel-exact color control for free, and once I built one shared DashboardCard base class for the rounded-card chrome, it wasn't actually that much code to reuse across PieChart, BarChart, and DashboardListCard."),
+            "No icon library, so the icons, badges, and corners are hand-drawn.",
+            "Every sidebar icon in NavIconRenderer, the rounded card corners, the status badges, and the two diagrams on this exact screen are all plain GDI+: Graphics.FillPath, DrawPath, and DrawString calls inside OnPaint overrides, not a NuGet icon package. The dashboard's charts used to be GDI+ too, a hand-drawn PieChart and BarChart, before I replaced them with Syncfusion's ChartControl (see the Syncfusion entry below). GDI+ is still the right call for the smaller stuff, though. A third-party icon or badge library means fighting its own theming API just to hit this app's exact brand tan, #D4C6A6, and once I built one shared RoundedCorners helper, hand-drawing the rest wasn't actually that much code."),
+        new(
+            "Syncfusion",
+            "UI Framework",
+            "Every grid and chart in the app runs on Syncfusion's WinForms suite.",
+            "My interview listing calls out 'experience with tools such as Syncfusion (or similar)' as a plus, so I went and got hands-on with it instead of leaving it as a resume line I'd never actually used. Every DataGridView in the app, all eleven of them including the read-only Database Explorer and the editable Purchase Order line-items grid, now runs on Syncfusion.SfDataGrid.WinForms, and both dashboard charts run on Syncfusion.Chart.Windows's ChartControl. The Community License key lives in a gitignored appsettings.local.json, never in source control since this repo is public, and gets registered once at startup in Program.cs through Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense. I skipped Syncfusion's prebuilt visual themes like Office2019 on purpose. A prebuilt theme means another package and a color scheme that won't match this app's tan-and-black brand, so StyleAsSfDataGrid in ControlStyleExtensions sets every grid's colors straight from Theme.cs instead, the same pattern the rest of the app already uses for buttons and inputs."),
         new(
             "xUnit & Fake Repositories",
             "Testing",

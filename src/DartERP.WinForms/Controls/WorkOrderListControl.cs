@@ -4,6 +4,7 @@ using DartERP.Core.Models;
 using DartERP.WinForms.Forms;
 using DartERP.WinForms.Local;
 using DartERP.WinForms.Styling;
+using Syncfusion.WinForms.DataGrid;
 
 namespace DartERP.WinForms.Controls;
 
@@ -11,10 +12,12 @@ public class WorkOrderListControl : UserControl
 {
     private const string AllStatusesOption = "All Statuses";
 
+    private record WorkOrderRow(WorkOrder Source, string WorkOrderNumber, string Product, string Quantity, string StartDate, string DueDate, string Status, Color StatusColor);
+
     private readonly WorkOrderService _service;
     private readonly ProductService _productService;
     private readonly ComboBox _statusFilter;
-    private readonly DataGridView _grid;
+    private readonly SfDataGrid _grid;
     private readonly Panel _gridHost;
     private EmptyStateControl? _emptyState;
     private List<WorkOrder> _allOrders = [];
@@ -47,13 +50,13 @@ public class WorkOrderListControl : UserControl
         toolbar.Controls.Add(exportButton);
         toolbar.Controls.Add(newButton);
 
-        _grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = false };
-        _grid.StyleAsDataGrid();
+        _grid = new SfDataGrid { Dock = DockStyle.Fill, AutoGenerateColumns = false };
+        _grid.StyleAsSfDataGrid();
         BuildColumns();
         _grid.CellDoubleClick += async (_, e) =>
         {
-            if (e.RowIndex >= 0)
-                await OpenEditorAsync((WorkOrder)_grid.Rows[e.RowIndex].DataBoundItem);
+            if (e.DataRow.RowData is WorkOrderRow row)
+                await OpenEditorAsync(row.Source);
         };
 
         _gridHost = new Panel { Dock = DockStyle.Fill, BackColor = Theme.CardBackground };
@@ -68,48 +71,33 @@ public class WorkOrderListControl : UserControl
 
     private void BuildColumns()
     {
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "WorkOrderNumber", HeaderText = "WO #", DataPropertyName = "WorkOrderNumber", FillWeight = 90 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Product", HeaderText = "Product", FillWeight = 180 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Quantity", HeaderText = "Qty", DataPropertyName = "Quantity", FillWeight = 60, DefaultCellStyle = { Alignment = DataGridViewContentAlignment.MiddleRight } });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "StartDate", HeaderText = "Start Date", FillWeight = 100 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "DueDate", HeaderText = "Due Date", FillWeight = 100 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Status", HeaderText = "Status", FillWeight = 110 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "WorkOrderNumber", HeaderText = "WO #", Width = 90 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Product", HeaderText = "Product", Width = 180 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Quantity", HeaderText = "Qty", Width = 60 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "StartDate", HeaderText = "Start Date", Width = 100 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "DueDate", HeaderText = "Due Date", Width = 100 });
+        _grid.Columns.Add(new GridTextColumn { MappingName = "Status", HeaderText = "Status", Width = 110 });
 
-        _grid.CellFormatting += (_, e) =>
+        _grid.QueryCellStyle += (_, e) =>
         {
-            if (e.RowIndex < 0)
+            if (e.Column.MappingName != "Status" || e.DataRow.RowData is not WorkOrderRow row)
                 return;
 
-            var wo = (WorkOrder)_grid.Rows[e.RowIndex].DataBoundItem;
-            var columnName = _grid.Columns[e.ColumnIndex].Name;
-
-            switch (columnName)
-            {
-                case "Product":
-                    e.Value = wo.Product?.ProductName ?? string.Empty;
-                    e.FormattingApplied = true;
-                    break;
-                case "StartDate":
-                    e.Value = wo.StartDate.ToString("MM/dd/yyyy");
-                    e.FormattingApplied = true;
-                    break;
-                case "DueDate":
-                    e.Value = wo.DueDate.ToString("MM/dd/yyyy");
-                    e.FormattingApplied = true;
-                    break;
-                case "Status" when e.CellStyle is not null:
-                    e.Value = EnumDisplay.For(wo.Status);
-                    e.CellStyle.ForeColor = StatusColors.For(wo.Status);
-                    e.CellStyle.Font = Theme.FontBodyBold;
-                    e.FormattingApplied = true;
-                    break;
-            }
+            e.Style.TextColor = row.StatusColor;
+            e.Style.Font.Bold = true;
         };
     }
 
     private async Task RefreshAsync()
     {
         _allOrders = await _service.GetAllWithProductAsync();
+
+        // Navigating away disposes this control while the query above is
+        // still in flight — SfDataGrid throws on a DataSource assignment
+        // after disposal (DataGridView never did), so this guard is load-bearing.
+        if (IsDisposed)
+            return;
+
         ApplyFilter();
     }
 
@@ -135,7 +123,10 @@ public class WorkOrderListControl : UserControl
             if (_emptyState is not null)
                 _gridHost.Controls.Remove(_emptyState);
             _grid.Visible = true;
-            _grid.DataSource = filtered;
+            _grid.DataSource = filtered.Select(wo => new WorkOrderRow(
+                wo, wo.WorkOrderNumber, wo.Product?.ProductName ?? string.Empty, wo.Quantity.ToString(),
+                wo.StartDate.ToString("MM/dd/yyyy"), wo.DueDate.ToString("MM/dd/yyyy"),
+                EnumDisplay.For(wo.Status), StatusColors.For(wo.Status))).ToList();
         }
     }
 
