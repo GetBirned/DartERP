@@ -59,8 +59,8 @@ public class SerializedItemEditForm : Form
         }
         else
         {
-            FormLayoutHelper.AddRow(layout, 0, "Work Order", new Label { Text = existing.WorkOrder?.WorkOrderNumber ?? "-", Font = Theme.FontBodyBold, TextAlign = ContentAlignment.MiddleLeft });
-            FormLayoutHelper.AddRow(layout, 1, "Serial Number", new Label { Text = existing.SerialNumber, Font = Theme.FontBodyBold, TextAlign = ContentAlignment.MiddleLeft });
+            FormLayoutHelper.AddRow(layout, 0, "Work Order", new Label { Text = existing.WorkOrder?.WorkOrderNumber ?? "-", Font = Theme.FontBodyBold, ForeColor = Theme.TextPrimary, TextAlign = ContentAlignment.MiddleLeft });
+            FormLayoutHelper.AddRow(layout, 1, "Serial Number", new Label { Text = existing.SerialNumber, Font = Theme.FontBodyBold, ForeColor = Theme.TextPrimary, TextAlign = ContentAlignment.MiddleLeft });
             FormLayoutHelper.AddRow(layout, 2, "Status", _statusBox);
 
             // ComboBox.SelectedItem only takes effect once the control's native handle

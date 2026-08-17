@@ -55,7 +55,7 @@ public class QualityInspectionEditForm : Form
         }
         else
         {
-            FormLayoutHelper.AddRow(layout, 0, "Serialized Item", new Label { Text = existing.SerializedItem?.SerialNumber ?? "-", Font = Theme.FontBodyBold, TextAlign = ContentAlignment.MiddleLeft });
+            FormLayoutHelper.AddRow(layout, 0, "Serialized Item", new Label { Text = existing.SerializedItem?.SerialNumber ?? "-", Font = Theme.FontBodyBold, ForeColor = Theme.TextPrimary, TextAlign = ContentAlignment.MiddleLeft });
 
             // ComboBox.SelectedItem only takes effect once the control's native handle
             // exists, so this must wait for Load rather than run here.

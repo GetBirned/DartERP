@@ -178,6 +178,7 @@ public class PurchaseOrderEditForm : Form
             Name = "PoNumberValue",
             Text = _existing?.PurchaseOrderNumber ?? "(auto-generated)",
             Font = Theme.FontBodyBold,
+            ForeColor = Theme.TextPrimary,
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleLeft,
         };

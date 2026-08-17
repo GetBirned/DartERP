@@ -7,7 +7,7 @@ namespace DartERP.WinForms.Controls;
 public class DashboardControl : UserControl
 {
     private readonly DashboardService _service;
-    private readonly FlowLayoutPanel _kpiPanel;
+    private readonly TableLayoutPanel _kpiPanel;
     private readonly TableLayoutPanel _cardsPanel;
     private readonly DashboardListCard _recentPurchaseOrdersCard;
     private readonly DashboardListCard _belowReorderCard;
@@ -22,25 +22,35 @@ public class DashboardControl : UserControl
         Dock = DockStyle.Fill;
         BackColor = Theme.AppBackground;
 
-        _kpiPanel = new FlowLayoutPanel
+        // A 3x2 grid, not a wrapping flow panel — six cards divides evenly
+        // into 3 columns, so every row is always fully populated instead of
+        // a FlowLayoutPanel leaving a half-empty trailing row whenever the
+        // window is wide enough to fit 4 across but there are only 2 left.
+        _kpiPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Top,
             Height = 232,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = true,
+            ColumnCount = 3,
+            RowCount = 2,
         };
+        _kpiPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / 3));
+        _kpiPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / 3));
+        _kpiPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / 3));
+        _kpiPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+        _kpiPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
 
-        // Three columns, not two: the third holds the two chart cards,
-        // stacked one per row, alongside the four attention-needed lists.
+        // Charts get noticeably more width than the two list-card columns —
+        // a donut legend and a bar chart's value-axis labels both need real
+        // horizontal room, which a plain three-way even split never gave them.
         _cardsPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 3,
             RowCount = 2,
         };
-        _cardsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34));
-        _cardsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33));
-        _cardsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33));
+        _cardsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 24));
+        _cardsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 24));
+        _cardsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 52));
         _cardsPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
         _cardsPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
 
@@ -49,7 +59,7 @@ public class DashboardControl : UserControl
         _dueSoonCard = new DashboardListCard("Work Orders Due Soon", "Nothing due in the next 7 days.");
         _pendingInspectionsCard = new DashboardListCard("Pending Quality Inspections", "No inspections awaiting a result.");
         _purchaseOrdersByStatusChart = new SfPieChartCard("Purchase Orders by Status");
-        _inventoryValueByCategoryChart = new SfBarChartCard("Inventory Value by Category", "C0");
+        _inventoryValueByCategoryChart = new SfBarChartCard("Inventory Value by Category", "$#,##0,K");
 
         _cardsPanel.Controls.Add(_recentPurchaseOrdersCard, 0, 0);
         _cardsPanel.Controls.Add(_belowReorderCard, 1, 0);
@@ -77,12 +87,12 @@ public class DashboardControl : UserControl
             return;
 
         _kpiPanel.Controls.Clear();
-        _kpiPanel.Controls.Add(new KpiCard("Active Customers", summary.ActiveCustomers.ToString()) { AccentColor = Theme.AccentPrimary });
-        _kpiPanel.Controls.Add(new KpiCard("Active Vendors", summary.ActiveVendors.ToString()) { AccentColor = Theme.AccentPrimary });
-        _kpiPanel.Controls.Add(new KpiCard("Open Purchase Orders", summary.OpenPurchaseOrders.ToString()) { AccentColor = Theme.WarningAmber });
-        _kpiPanel.Controls.Add(new KpiCard("Open Work Orders", summary.OpenWorkOrders.ToString()) { AccentColor = Theme.WarningAmber });
-        _kpiPanel.Controls.Add(new KpiCard("Inventory Value", summary.InventoryValue.ToString("C0")) { AccentColor = Theme.SuccessGreen });
-        _kpiPanel.Controls.Add(new KpiCard("Units In Production", summary.UnitsInProduction.ToString()) { AccentColor = Theme.SuccessGreen });
+        AddKpiCard(0, 0, "Active Customers", summary.ActiveCustomers.ToString(), Theme.AccentPrimary);
+        AddKpiCard(1, 0, "Active Vendors", summary.ActiveVendors.ToString(), Theme.AccentPrimary);
+        AddKpiCard(2, 0, "Open Purchase Orders", summary.OpenPurchaseOrders.ToString(), Theme.WarningAmber);
+        AddKpiCard(0, 1, "Open Work Orders", summary.OpenWorkOrders.ToString(), Theme.WarningAmber);
+        AddKpiCard(1, 1, "Inventory Value", summary.InventoryValue.ToString("C0"), Theme.SuccessGreen);
+        AddKpiCard(2, 1, "Units In Production", summary.UnitsInProduction.ToString(), Theme.SuccessGreen);
 
         _recentPurchaseOrdersCard.SetRows(summary.RecentPurchaseOrders
             .Select(po => new DashboardListRow(
@@ -123,5 +133,11 @@ public class DashboardControl : UserControl
                 summary.InventoryValueByCategory.GetValueOrDefault(category)))
             .Where(bar => bar.Value > 0)
             .ToList());
+    }
+
+    private void AddKpiCard(int column, int row, string title, string value, Color accentColor)
+    {
+        var card = new KpiCard(title, value) { AccentColor = accentColor, Dock = DockStyle.Fill };
+        _kpiPanel.Controls.Add(card, column, row);
     }
 }

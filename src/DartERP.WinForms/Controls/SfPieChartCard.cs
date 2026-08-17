@@ -64,6 +64,12 @@ public class SfPieChartCard : DashboardCard
             // without this it shows each slice's raw value ("1", "2"...)
             // rather than the status name.
             series.Styles[i].Text = visible[i].Label;
+            // Legend.TextColor (set once, above) turned out to only affect
+            // the legend title, not each entry's label — same "shared
+            // property doesn't actually drive rendering" trap as
+            // CellStyleInfo.BackColor. Each legend entry's text color
+            // actually comes from its point's own style.
+            series.Styles[i].TextColor = Theme.TextPrimary;
         }
     }
 }

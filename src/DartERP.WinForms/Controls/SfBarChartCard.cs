@@ -30,14 +30,28 @@ public class SfBarChartCard : DashboardCard
         _chart.ChartArea.GridBackInterior = new BrushInfo(Theme.CardBackground);
         _chart.PrimaryXAxis.ForeColor = Theme.TextSecondary;
         _chart.PrimaryYAxis.ForeColor = Theme.TextSecondary;
+        _chart.PrimaryXAxis.Font = Theme.FontSmall;
+        _chart.PrimaryYAxis.Font = Theme.FontSmall;
         // No gridlines on the original hand-drawn chart either — keeps the
         // tile as plain horizontal bars instead of a boxed-in plot area.
         _chart.PrimaryXAxis.DrawGrid = false;
         _chart.PrimaryYAxis.DrawGrid = false;
+        // "$#,##0,K" rather than plain "C0" — a trailing comma right before
+        // the end of a .NET custom numeric format divides by 1000, so
+        // $25,000 renders as $25K instead of $25,000, which is what stops
+        // the axis's tick labels from overlapping each other.
         if (valueAxisFormat is not null)
             _chart.PrimaryXAxis.Format = valueAxisFormat;
 
-        Body.Controls.Add(_chart);
+        // ChartControl.Margin is silently ignored under Dock.Fill — same
+        // "the property doesn't actually drive anything" trap as
+        // Style.CellStyle.BackColor and Legend.TextColor elsewhere in this
+        // migration — so the trailing gap the rightmost tick label needs
+        // comes from a plain WinForms Panel's Padding instead, which is
+        // guaranteed to be honored.
+        var wrapper = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 0, 32, 0) };
+        wrapper.Controls.Add(_chart);
+        Body.Controls.Add(wrapper);
     }
 
     public void SetData(IReadOnlyList<BarSegment> bars)
